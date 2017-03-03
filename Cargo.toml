@@ -1,0 +1,10 @@
+[package]
+name = "ruspell"
+version = "0.1.0"
+authors = ["Navitia <navitia@kisio.org>"]
+description = "Spell-checker for transportation data."
+
+[dependencies]
+structopt = "0.0.3"
+structopt-derive = "0.0.3"
+csv = "0.15"
