@@ -3,6 +3,7 @@ name = "ruspell"
 version = "0.1.0"
 dependencies = [
  "csv 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt-derive 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

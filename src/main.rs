@@ -1,3 +1,4 @@
+extern crate rustc_serialize;
 extern crate csv;
 extern crate structopt;
 #[macro_use]
@@ -7,8 +8,8 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 struct Args {
-    #[structopt(long = "input", short = "i", help = "CSV file to be processed \
-                                                     (typically a GTFS stops.txt file)")]
+    #[structopt(long = "input", short = "i",
+                help = "CSV file to be processed (typically a GTFS stops.txt file)")]
     input: String,
 
     #[structopt(long = "output", short = "o", default_value = "rules.csv",
@@ -77,6 +78,39 @@ impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
     }
 }
 
+
+fn new_record_iter<'a, R: std::io::Read + 'a>
+    (r: &'a mut csv::Reader<R>,
+     heading_id: &str,
+     heading_name: &str)
+     -> std::iter::FilterMap<RecordIter<'a, R>, fn(csv::Result<Record>) -> Option<Record>> {
+    fn reader_handler(rc: csv::Result<Record>) -> Option<Record> {
+        rc.map_err(|e| println!("error at csv line decoding : {}", e))
+            .ok()
+    }
+    RecordIter::new(r, heading_id, heading_name)
+        .expect("Can't find needed fields in the header.")
+        .filter_map(reader_handler)
+}
+
+
+#[derive(Debug, RustcEncodable)]
+struct RecordRule {
+    id: String,
+    old_name: String,
+    new_name: String,
+}
+
+
+fn process_record(rec: &Record) -> Option<RecordRule> {
+    Some(RecordRule {
+        id: rec.id.clone(),
+        old_name: rec.name.clone(),
+        new_name: rec.name.clone(),
+    })
+}
+
+
 fn main() {
     let args = Args::from_args();
 
@@ -84,20 +118,14 @@ fn main() {
         .unwrap()
         .double_quote(true);
 
-    let record_list: Vec<Record> = RecordIter::new(&mut rdr, &args.heading_id, &args.heading_name)
-        .expect("Can't find needed fields in the header.")
-        .filter_map(|rc| {
-            rc.map_err(|e| println!("error at csv line decoding : {}", e))
-                .ok()
-        })
-        .collect();
+    let records = new_record_iter(&mut rdr, &args.heading_id, &args.heading_name);
 
     let mut wtr = csv::Writer::from_file(args.output).unwrap();
     wtr.encode(("id", "old_name", "new_name"))
         .unwrap();
 
-    for rec in &record_list {
-        wtr.encode((&rec.id, &rec.name, &rec.name))
+    for rule in records.filter_map(|rec| process_record(&rec)) {
+        wtr.encode(&rule)
             .unwrap();
     }
 }
