@@ -1,6 +1,7 @@
 extern crate rustc_serialize;
 extern crate csv;
 extern crate structopt;
+extern crate encoding;
 #[macro_use]
 extern crate structopt_derive;
 
@@ -102,12 +103,45 @@ struct RecordRule {
 }
 
 
+use encoding::label::encoding_from_whatwg_label;
+use encoding::EncoderTrap;
+fn decode(name: String) -> String {
+    let latin9 = encoding_from_whatwg_label("iso_8859-15").unwrap();
+    if let Ok(Ok(res)) = latin9.encode(&name, EncoderTrap::Strict).map(String::from_utf8) {
+        return res;
+    }
+    let latin1 = encoding_from_whatwg_label("latin1").unwrap();
+    if let Ok(Ok(res)) = latin1.encode(&name, EncoderTrap::Strict).map(String::from_utf8) {
+        return res;
+    }
+    name
+}
+
+
+fn basic_title_case(name: String) -> String {
+    if name.chars().all(|c| !c.is_lowercase()) {
+        let mut chars = name.chars();
+        let mut new_name = String::new();
+        chars.next().map(|c| new_name.push(c));
+        new_name.extend(chars.flat_map(char::to_lowercase));
+        new_name
+    } else {
+        name
+    }
+}
+
+
 fn process_record(rec: &Record) -> Option<RecordRule> {
-    Some(RecordRule {
-        id: rec.id.clone(),
-        old_name: rec.name.clone(),
-        new_name: rec.name.clone(),
-    })
+    let new_name = basic_title_case(decode(rec.name.clone()));
+    if rec.name == new_name {
+        None
+    } else {
+        Some(RecordRule {
+            id: rec.id.clone(),
+            old_name: rec.name.clone(),
+            new_name: new_name,
+        })
+    }
 }
 
 
