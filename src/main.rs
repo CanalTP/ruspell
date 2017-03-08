@@ -2,8 +2,11 @@ extern crate rustc_serialize;
 extern crate csv;
 extern crate structopt;
 extern crate encoding;
+extern crate regex;
 #[macro_use]
 extern crate structopt_derive;
+#[macro_use]
+extern crate lazy_static;
 
 use structopt::StructOpt;
 
@@ -50,10 +53,10 @@ impl<'a, R: std::io::Read + 'a> RecordIter<'a, R> {
         };
 
         Ok(RecordIter {
-            iter: r.records(),
-            id_pos: try!(get_pos(heading_id)),
-            name_pos: try!(get_pos(heading_name)),
-        })
+               iter: r.records(),
+               id_pos: try!(get_pos(heading_id)),
+               name_pos: try!(get_pos(heading_name)),
+           })
     }
 }
 impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
@@ -71,9 +74,9 @@ impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
                 let id = try!(get(&r, self.id_pos));
                 let name = try!(get(&r, self.name_pos));
                 Ok(Record {
-                    id: id.to_string(),
-                    name: name.to_string(),
-                })
+                       id: id.to_string(),
+                       name: name.to_string(),
+                   })
             })
         })
     }
@@ -86,8 +89,7 @@ fn new_record_iter<'a, R: std::io::Read + 'a>
      heading_name: &str)
      -> std::iter::FilterMap<RecordIter<'a, R>, fn(csv::Result<Record>) -> Option<Record>> {
     fn reader_handler(rc: csv::Result<Record>) -> Option<Record> {
-        rc.map_err(|e| println!("error at csv line decoding : {}", e))
-            .ok()
+        rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
     }
     RecordIter::new(r, heading_id, heading_name)
         .expect("Can't find needed fields in the header.")
@@ -103,14 +105,15 @@ struct RecordRule {
 }
 
 
-use encoding::label::encoding_from_whatwg_label;
+use encoding::Encoding;
+use encoding::all::{ISO_8859_15, WINDOWS_1252};
 use encoding::EncoderTrap;
 fn decode(name: String) -> String {
-    let latin9 = encoding_from_whatwg_label("iso_8859-15").unwrap();
+    let latin9 = ISO_8859_15;
     if let Ok(Ok(res)) = latin9.encode(&name, EncoderTrap::Strict).map(String::from_utf8) {
         return res;
     }
-    let latin1 = encoding_from_whatwg_label("latin1").unwrap();
+    let latin1 = WINDOWS_1252;
     if let Ok(Ok(res)) = latin1.encode(&name, EncoderTrap::Strict).map(String::from_utf8) {
         return res;
     }
@@ -118,29 +121,140 @@ fn decode(name: String) -> String {
 }
 
 
-fn basic_title_case(name: String) -> String {
-    if name.chars().all(|c| !c.is_lowercase()) {
-        let mut chars = name.chars();
-        let mut new_name = String::new();
-        chars.next().map(|c| new_name.push(c));
-        new_name.extend(chars.flat_map(char::to_lowercase));
-        new_name
-    } else {
-        name
+fn get_words(name: &String) -> Vec<&str> {
+    let mut words = Vec::<&str>::new();
+    let mut index_start_word = 0;
+    let mut is_current_alpha = name.chars()
+        .next()
+        .map(char::is_alphanumeric)
+        .unwrap_or(true);
+    for c in name.char_indices() {
+        if c.1.is_alphanumeric() != is_current_alpha {
+            words.push(&name[index_start_word..c.0]);
+            is_current_alpha = c.1.is_alphanumeric();
+            index_start_word = c.0;
+        }
     }
+    words.push(&name[index_start_word..]);
+    words
 }
 
 
+fn first_upper(name: String) -> String {
+    let mut chars = name.chars();
+    let mut new_name = String::new();
+    new_name.extend(chars.next().map(|c| c.to_uppercase().collect::<String>()));
+    new_name.extend(chars);
+    new_name
+}
+
+
+/// MUSEE dE La GARE sncf > Musee de la gare de lyon
+fn first_upper_all_lower(name: String) -> String {
+    let mut chars = name.chars();
+    let mut new_name = String::new();
+    new_name.extend(chars.next().map(|c| c.to_uppercase().collect::<String>()));
+    new_name.extend(chars.flat_map(char::to_lowercase));
+    new_name
+}
+
+
+/// specific management of full-uppercase names
+fn process_full_upper(name: String) -> String {
+    let mut new_name = String::new();
+    for word in get_words(&name) {
+        new_name.push_str(&first_upper_all_lower(word.to_string()));
+    }
+    new_name
+}
+
+
+fn must_be_lower(text: &str) -> bool {
+    lazy_static! {
+        static ref RE: Regex =
+            Regex::new(r"(?i)^(en|sur|sous|de|du|des|le|la|les|au|aux|un|une|à)$").unwrap();
+    }
+    RE.is_match(text)
+}
+
+fn must_be_upper(text: &str) -> bool {
+    lazy_static! {
+        static ref RE: Regex =
+            Regex::new(r"(?i)^(RER|EDF|INRIA|CRC|HEC|SNCF|RATP|HLM|ZA|ZI|CCI|RN\d*|\w*\d\w*|RD\d*|(XL|X{0,3})(IX|IV|V?I{0,3}))$").unwrap();
+    }
+    RE.is_match(text)
+}
+
+use regex::Regex;
+fn sed_all(name: String) -> String {
+    if must_be_lower(&name) {
+        return name.to_lowercase();
+    }
+
+    if must_be_upper(&name) {
+        return name.to_uppercase();
+    }
+
+    let lower_case = name.to_lowercase();
+    if lower_case == "gal" {
+        return "Général".to_string();
+    } else if lower_case == "mal" {
+        return "Maréchal".to_string();
+    }
+
+    name
+}
+
+
+use regex::Captures;
+fn regex_all_name(name: String) -> String {
+    lazy_static! {
+        static ref RE_SAINT: Regex =
+            Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W").unwrap();
+    }
+    let res = RE_SAINT.replace_all(&name, |caps: &Captures| {
+        format!("{}Saint{}-", &caps[1], &caps[2].to_lowercase())
+    });
+
+    lazy_static! {
+        static ref RE_A: Regex =
+            Regex::new(r"(?i) a ").unwrap();
+    }
+    let res = RE_A.replace_all(&res, " à ");
+
+    lazy_static! {
+        static ref RE_QUOTE: Regex =
+            Regex::new(r"(?i)(^|\W)([ld])[ '](h?[aeiouy])").unwrap();
+    }
+    let res = RE_QUOTE.replace_all(&res, |caps: &Captures| {
+        format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
+    });
+    res.into_owned()
+}
+
+
+/// management of all names
 fn process_record(rec: &Record) -> Option<RecordRule> {
-    let new_name = basic_title_case(decode(rec.name.clone()));
+    let mut new_name = decode(rec.name.clone());
+    if new_name.chars().all(|c| !c.is_lowercase()) {
+        new_name = process_full_upper(new_name);
+    }
+    let mut tmp = String::new();
+    for word in get_words(&new_name) {
+        tmp.push_str(&sed_all(word.to_string()));
+    }
+    new_name = regex_all_name(tmp);
+    new_name = first_upper(new_name);
+
+    //println!("{} >> {:?}", rec.name, get_words(&new_name));
     if rec.name == new_name {
         None
     } else {
         Some(RecordRule {
-            id: rec.id.clone(),
-            old_name: rec.name.clone(),
-            new_name: new_name,
-        })
+                 id: rec.id.clone(),
+                 old_name: rec.name.clone(),
+                 new_name: new_name,
+             })
     }
 }
 
@@ -148,18 +262,14 @@ fn process_record(rec: &Record) -> Option<RecordRule> {
 fn main() {
     let args = Args::from_args();
 
-    let mut rdr = csv::Reader::from_file(args.input)
-        .unwrap()
-        .double_quote(true);
+    let mut rdr = csv::Reader::from_file(args.input).unwrap().double_quote(true);
 
     let records = new_record_iter(&mut rdr, &args.heading_id, &args.heading_name);
 
     let mut wtr = csv::Writer::from_file(args.output).unwrap();
-    wtr.encode(("id", "old_name", "new_name"))
-        .unwrap();
+    wtr.encode(("id", "old_name", "new_name")).unwrap();
 
     for rule in records.filter_map(|rec| process_record(&rec)) {
-        wtr.encode(&rule)
-            .unwrap();
+        wtr.encode(&rule).unwrap();
     }
 }
