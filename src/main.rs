@@ -13,18 +13,25 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 struct Args {
     #[structopt(long = "input", short = "i",
-                help = "CSV file to be processed (typically a GTFS stops.txt file)")]
+                help = "Path to input CSV file to be processed \
+                        (typically a GTFS stops.txt file).")]
     input: String,
 
-    #[structopt(long = "output", short = "o", default_value = "rules.csv",
-                help = "Fusio rules.csv file")]
-    output: String,
+    #[structopt(long = "output", short = "o",
+                help = "Path to output CSV file after processing \
+                        (same as input, name column processed).")]
+    output: Option<String>,
 
-    #[structopt(long = "id", short = "d", default_value = "stop_id",
-                help = "The heading name of the column that is the unique id of the record")]
+    #[structopt(long = "rules", short = "r", default_value = "rules.csv",
+                help = "Path to output rules.csv file \
+                        (modifications description).")]
+    rules: String,
+
+    #[structopt(long = "id", short = "I", default_value = "stop_id",
+                help = "The heading name of the column that is the unique id of the record.")]
     heading_id: String,
 
-    #[structopt(long = "name", short = "s", default_value = "stop_name",
+    #[structopt(long = "name", short = "N", default_value = "stop_name",
                 help = "The heading name of the column that needs a spell_check.")]
     heading_name: String,
 }
@@ -34,6 +41,7 @@ struct Args {
 struct Record {
     id: String,
     name: String,
+    raw: Vec<String>,
 }
 
 struct RecordIter<'a, R: std::io::Read + 'a> {
@@ -71,11 +79,12 @@ impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
 
         self.iter.next().map(|r| {
             r.and_then(|r| {
-                let id = try!(get(&r, self.id_pos));
-                let name = try!(get(&r, self.name_pos));
+                let id = try!(get(&r, self.id_pos)).to_string();
+                let name = try!(get(&r, self.name_pos)).to_string();
                 Ok(Record {
-                       id: id.to_string(),
-                       name: name.to_string(),
+                       id: id,
+                       name: name,
+                       raw: r,
                    })
             })
         })
@@ -83,17 +92,23 @@ impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
 }
 
 
-fn new_record_iter<'a, R: std::io::Read + 'a>
-    (r: &'a mut csv::Reader<R>,
-     heading_id: &str,
-     heading_name: &str)
-     -> std::iter::FilterMap<RecordIter<'a, R>, fn(csv::Result<Record>) -> Option<Record>> {
+fn new_record_iter<'a, R: std::io::Read + 'a>(r: &'a mut csv::Reader<R>,
+                                              heading_id: &str,
+                                              heading_name: &str)
+                                              -> (std::iter::FilterMap<RecordIter<'a, R>,
+                                                                       fn(csv::Result<Record>)
+                                                                          -> Option<Record>>,
+                                                  Vec<String>,
+                                                  usize) {
     fn reader_handler(rc: csv::Result<Record>) -> Option<Record> {
         rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
     }
-    RecordIter::new(r, heading_id, heading_name)
-        .expect("Can't find needed fields in the header.")
-        .filter_map(reader_handler)
+    let headers = r.headers().unwrap();
+    let rec_iter = RecordIter::new(r, heading_id, heading_name)
+        .expect("Can't find needed fields in the header.");
+    let pos = rec_iter.name_pos;
+
+    (rec_iter.filter_map(reader_handler), headers, pos)
 }
 
 
@@ -309,12 +324,21 @@ fn main() {
 
     let mut rdr = csv::Reader::from_file(args.input).unwrap().double_quote(true);
 
-    let records = new_record_iter(&mut rdr, &args.heading_id, &args.heading_name);
+    let (records, headers, name_pos) =
+        new_record_iter(&mut rdr, &args.heading_id, &args.heading_name);
 
-    let mut wtr = csv::Writer::from_file(args.output).unwrap();
-    wtr.encode(("id", "old_name", "new_name")).unwrap();
+    let mut wtr_rules = csv::Writer::from_file(args.rules).unwrap();
+    wtr_rules.encode(("id", "old_name", "new_name")).unwrap();
 
-    for rule in records.filter_map(|rec| process_record(&rec)) {
-        wtr.encode(&rule).unwrap();
+    let mut wtr_stops = args.output.as_ref().map(|f| csv::Writer::from_file(f).unwrap());
+    wtr_stops.as_mut().map(|w| w.encode(headers).unwrap());
+
+    for mut rec in records {
+        if let Some(rule) = process_record(&rec) {
+            rec.raw[name_pos] = rule.new_name.clone();
+
+            wtr_rules.encode(&rule).unwrap();
+        }
+        wtr_stops.as_mut().map(|w| w.encode(&rec.raw).unwrap());
     }
 }
