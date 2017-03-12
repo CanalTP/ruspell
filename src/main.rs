@@ -3,6 +3,8 @@ extern crate csv;
 extern crate structopt;
 extern crate encoding;
 extern crate regex;
+extern crate ispell;
+extern crate unicode_normalization;
 #[macro_use]
 extern crate structopt_derive;
 #[macro_use]
@@ -199,7 +201,7 @@ fn must_be_upper(text: &str) -> bool {
         static ref RE: RegexSet =
             RegexSet::new(&[
                 r"(?i)^(RER|CDG|CES|ASPTT|PTT|EDF|INRIA|INRA|CRC|HEC|SNCF|RATP|HLM|CHR|CHU)$",
-                r"(?i)^(ZA|ZI|RPA|CFA|CC|CCI|UFR|CPAM|ANPE|RN\d*|\w*\d\w*|RD\d*)$",
+                r"(?i)^(ZA|ZI|RPA|CFA|CEA|CC|CCI|UFR|CPAM|ANPE|RN\d*|\w*\d\w*|RD\d*)$",
                 r"(?i)^(XL|X{0,3})(IX|IV|V?I{0,3})$",
                 ]).unwrap();
     }
@@ -253,6 +255,12 @@ fn regex_all_name(name: String) -> String {
     let res = RE_BOULEVARD.replace_all(&res, "${1}Boulevard${2}");
 
     lazy_static! {
+        static ref RE_AVENUE: Regex =
+            Regex::new(r"(?i)(^|\W)ave?\.?(\W|$)").unwrap();
+    }
+    let res = RE_AVENUE.replace_all(&res, "${1}Avenue${2}");
+
+    lazy_static! {
         static ref RE_LIEU_DIT: Regex =
             Regex::new(r"(?i)(^|\W)rte(\W|$)").unwrap();
     }
@@ -294,6 +302,25 @@ fn regex_all_name(name: String) -> String {
 }
 
 
+use std::thread::sleep;
+use ispell::SpellLauncher;
+fn ispell(name: String) -> String {
+    let mut checker = SpellLauncher::new()
+        .aspell()
+        .dictionary("fr_FR")
+        .launch()
+        .unwrap();
+    let errors = checker.check(&name).unwrap();
+    for e in errors {
+        println!("'{}' (pos: {}) is misspelled!", &e.misspelled, e.position);
+        if !e.suggestions.is_empty() {
+            println!("Maybe you meant '{}'?", &e.suggestions[0]);
+        }
+    }
+    sleep(std::time::Duration::new(1, 0));
+    name
+}
+
 /// management of all names
 fn process_record(rec: &Record) -> Option<RecordRule> {
     let mut new_name = decode(rec.name.clone());
@@ -305,6 +332,9 @@ fn process_record(rec: &Record) -> Option<RecordRule> {
     }
 
     new_name = regex_all_name(tmp);
+
+    //new_name = ispell(new_name);
+
     new_name = first_upper(new_name);
 
     if rec.name == new_name {
@@ -315,6 +345,99 @@ fn process_record(rec: &Record) -> Option<RecordRule> {
                  old_name: rec.name.clone(),
                  new_name: new_name,
              })
+    }
+}
+
+
+
+use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::is_combining_mark;
+struct SpellChecker {
+    aspell: ispell::SpellChecker,
+    nb_replace: u32,
+    nb_error: u32,
+}
+impl SpellChecker {
+    fn new() -> std::result::Result<Self, String> {
+        if let Ok(aspell_checker) =
+            SpellLauncher::new()
+                .timeout(6)
+                .aspell()
+                .dictionary("fr")
+                .launch() {
+            Ok(SpellChecker {
+                   aspell: aspell_checker,
+                   nb_replace: 0,
+                   nb_error: 0,
+               })
+        } else {
+            Err("Impossible to launch aspell".to_string())
+        }
+    }
+
+    fn check(&mut self, name: String) -> String {
+
+        let errors_res = self.aspell.check(&name);
+        if let Err(e) = errors_res {
+            print!("{:?}", e);
+            println!(" ({})", name);
+            self.nb_error += 1;
+            return name;
+            //errors_res = self.aspell.check(&name);
+        }
+
+        let misspelt_errors = errors_res.unwrap();
+        /*if misspelt_errors.is_empty() {
+            println!("all is ok ({})", name);
+        }*/
+
+        for e in misspelt_errors {
+            //println!("'{}' (pos: {}) is misspelled!", &e.misspelled, e.position);
+            if !e.suggestions.is_empty() {
+                //println!("Maybe you meant : '{:?}'?", &e.suggestions[0]);
+            } else {
+                //println!("Nothing better to offer...");
+            }
+
+            if !&e.suggestions.is_empty() {
+                let normed_miss: String = e.misspelled
+                    .nfkd()
+                    .filter(|c| !is_combining_mark(*c))
+                    .flat_map(char::to_lowercase)
+                    .collect();
+                let normed_sugg: String = e.suggestions[0]
+                    .nfkd()
+                    .filter(|c| !is_combining_mark(*c))
+                    .flat_map(char::to_lowercase)
+                    .collect();
+                if normed_miss == normed_sugg && e.misspelled.len() < e.suggestions[0].len() {
+                    println!("REPLACE VALID  : {} > {} ({})",
+                             &e.misspelled,
+                             &e.suggestions[0],
+                             name);
+                    self.nb_replace += 1;
+                }
+                /*let mut m_c = e.misspelled.chars();
+                for s_c in e.suggestions[0].chars() {
+                    if s_c >= 128 as char
+                }*/
+                /*if &e.misspelled.chars().count() == &e.suggestions[0].chars().count() {
+                    for (m, s) in &e.misspelled.chars().iter.zip(&e.suggestions[0]
+                                                                      .chars()
+                                                                      .iter) {}
+
+                }*/
+            }
+
+            /*if !&e.suggestions.is_empty() && &e.misspelled.len() == &e.suggestions[0].len() &&
+               &e.misspelled.chars().zip(&e.suggestions[0].chars()).all(|(m, s)| {
+                                                                            s >= 128 as char ||
+                                                                            m == s
+                                                                        }) {
+                println!("REPLACE VALID: {} > {}", &e.misspelled, &e.suggestions[0]);
+            }*/
+        }
+        name
     }
 }
 
@@ -333,12 +456,23 @@ fn main() {
     let mut wtr_stops = args.output.as_ref().map(|f| csv::Writer::from_file(f).unwrap());
     wtr_stops.as_mut().map(|w| w.encode(headers).unwrap());
 
+    let mut aspell = SpellChecker::new().unwrap();
+
     for mut rec in records {
         if let Some(rule) = process_record(&rec) {
             rec.raw[name_pos] = rule.new_name.clone();
 
             wtr_rules.encode(&rule).unwrap();
         }
+
+        let new_name = aspell.check(rec.raw[name_pos].clone());
+        //println!("FINAL: {}", new_name);
+
         wtr_stops.as_mut().map(|w| w.encode(&rec.raw).unwrap());
     }
+
+    println!("replace: {} error: {}", aspell.nb_replace, aspell.nb_error);
 }
+
+// TODO : flush du stdout (rene sur rouget de l'isle)? timeout sur un motif particulier?
+
