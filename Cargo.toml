@@ -5,6 +5,8 @@ authors = ["Navitia <navitia@kisio.org>"]
 description = "Spell-checker for transportation data."
 
 [dependencies]
+ispell = { git = "file:/home/pbougue/dev/sources/rust-ispell" }
+#ispell = "0.3"
 structopt = "0.0.3"
 structopt-derive = "0.0.3"
 csv = "0.15"
@@ -12,5 +14,4 @@ rustc-serialize = "0.3"
 encoding = "0.2"
 regex = "0.2"
 lazy_static = "0.2"
-ispell = "0.3"
 unicode-normalization = "0.1.0"
