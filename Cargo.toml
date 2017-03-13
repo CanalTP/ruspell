@@ -5,8 +5,7 @@ authors = ["Navitia <navitia@kisio.org>"]
 description = "Spell-checker for transportation data."
 
 [dependencies]
-ispell = { git = "file:/home/pbougue/dev/sources/rust-ispell" }
-#ispell = "0.3"
+ispell = { git = "https://github.com/pbougue/rust-ispell", branch = "patch_check", version = "0.3.0" }
 structopt = "0.0.3"
 structopt-derive = "0.0.3"
 csv = "0.15"
