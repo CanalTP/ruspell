@@ -15,8 +15,8 @@ fn must_be_upper(text: &str) -> bool {
     lazy_static! {
         static ref RE: RegexSet =
             RegexSet::new(&[
-                r"(?i)^(RER|CDG|CES|ASPTT|PTT|EDF|INRIA|INRA|CRC|HEC|SNCF|RATP|HLM|CHR|CHU)$",
-                r"(?i)^(ZA|ZI|RPA|CFA|CEA|CC|CCI|UFR|CPAM|ANPE|RN\d*|\w*\d\w*|RD\d*)$",
+                r"(?i)^(RER|CDG|CES|ASPTT|PTT|EDF|GDF|INRIA|INRA|CRC|HEC|SNCF|RATP|HLM|CHR|CHU)$",
+                r"(?i)^(ZA|ZAC|ZI|RPA|CFA|CEA|CC|IUT|TGV|CCI|UFR|CPAM|ANPE|RN\d*|\w*\d\w*|RD\d*)$",
                 r"(?i)^(XL|X{0,3})(IX|IV|V?I{0,3})$",
                 ]).unwrap();
     }
@@ -46,7 +46,7 @@ pub fn sed_all(name: String) -> String {
 pub fn regex_all_name(name: String) -> String {
     lazy_static! {
         static ref RE_SAINT: Regex =
-            Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W").unwrap();
+            Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W+").unwrap();
     }
     let res = RE_SAINT.replace_all(&name, "${1}Saint${2}-");
     lazy_static! {
@@ -93,7 +93,7 @@ pub fn regex_all_name(name: String) -> String {
 
     lazy_static! {
         static ref RE_ROND_POINT: Regex =
-            Regex::new(r"(?i)(^|\W)ro?n?d[ \.-]?po?i?n?t ").unwrap();
+            Regex::new(r"(?i)(^|\W)ro?n?d[ \.-]?po?i?n?t(\W|$)").unwrap();
     }
     let res = RE_ROND_POINT.replace_all(&res, "${1}Rond-Point ");
 

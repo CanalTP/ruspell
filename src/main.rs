@@ -135,7 +135,7 @@ struct RecordRule {
 use utils::*;
 use regex_wrapper::*;
 /// management of all names
-fn process_record(rec: &Record) -> Option<RecordRule> {
+fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Option<RecordRule> {
     let mut new_name = decode(rec.name.clone());
     new_name = snake_case(new_name);
 
@@ -146,7 +146,7 @@ fn process_record(rec: &Record) -> Option<RecordRule> {
 
     new_name = regex_all_name(tmp);
 
-    //new_name = ispell(new_name);
+    new_name = ispell.check(new_name);
 
     new_name = first_upper(new_name);
 
@@ -184,8 +184,7 @@ fn main() {
     }
 
     for mut rec in records {
-        rec.raw[name_pos] = aspell.check(rec.raw[name_pos].clone());
-        if let Some(rule) = process_record(&rec) {
+        if let Some(rule) = process_record(&rec, &mut aspell) {
             rec.raw[name_pos] = rule.new_name.clone();
 
             wtr_rules.encode(&rule).unwrap();
@@ -198,7 +197,8 @@ fn main() {
 }
 
 // TODO :
-// "12eme"" minuscules (attentio terminal et cdg...),
-// "prés hauts" ? > si plusieurs OK, pas de chgt et trace
-// essayer de vider le dictionnaire
+// "12eme"" minuscules (attention terminal et cdg...),
+// sigles bien capitalisés d'avance  mais perdus
+// "prés hauts" ? > si plusieurs OK, pas de chgt et trace... à voir
+// essayer de vider le dictionnaire?
 
