@@ -7,10 +7,16 @@ pub fn populate_dict_from_bano_file(file: &str, ispell: &mut ::ispell_wrapper::S
 
     let mut rdr = csv::Reader::from_file(file).unwrap().double_quote(true);
     let banos = new_bano_iter(&mut rdr);
+
+    // This map is built as follows :
+    // map_normed["napoleon"] = map_napo
+    // map_napo["Napoléon"] = 42 (occurancies)
+    // map_napo["Napoleon"] = 2 (occurancies)
     let mut map_normed = HashMap::new();
 
     for b in banos {
         for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
+            // do not consider full-uppercase word or word containing a digit
             if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
                 continue;
             }
@@ -27,6 +33,7 @@ pub fn populate_dict_from_bano_file(file: &str, ispell: &mut ::ispell_wrapper::S
     let mut nb_added = 0;
     for (normed_w, map) in map_normed {
         if let Some(interesting_word) = get_interesting_word(map) {
+            // adding word only if it has accent
             if interesting_word.len() > normed_w.len() {
                 ispell.add_word(&interesting_word).unwrap();
                 nb_added += 1;
@@ -39,6 +46,7 @@ pub fn populate_dict_from_bano_file(file: &str, ispell: &mut ::ispell_wrapper::S
 fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
     let mut map_iter = map.iter();
     let mut first_max_w = map_iter.next().unwrap();
+    // if a normed word only appears written one way, it is qualified
     if map.len() == 1 {
         return Some(first_max_w.0.clone());
     }
@@ -54,6 +62,8 @@ fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
             second_max_w = i;
         }
     }
+    // first and second max contain the 2 forms appearing more and their occurences
+    // if the first form appears more than 4 (empirical) times the second one, it is qualified
     if (first_max_w.1 / second_max_w.1) >= 4 {
         return Some(first_max_w.0.clone());
     }
@@ -93,8 +103,8 @@ impl<'a, R: std::io::Read + 'a> Iterator for BanoIter<'a, R> {
 
         self.iter.next().map(|r| {
             r.and_then(|r| {
-                let street = try!(get(&r, self.street_pos)).to_string();
-                let city = try!(get(&r, self.city_pos)).to_string();
+                let street = get(&r, self.street_pos)?.to_string();
+                let city = get(&r, self.city_pos)?.to_string();
                 Ok(Bano {
                        street: street,
                        city: city,
