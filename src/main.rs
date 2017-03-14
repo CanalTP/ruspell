@@ -63,7 +63,7 @@ struct RecordIter<'a, R: std::io::Read + 'a> {
 }
 impl<'a, R: std::io::Read + 'a> RecordIter<'a, R> {
     fn new(r: &'a mut csv::Reader<R>, heading_id: &str, heading_name: &str) -> csv::Result<Self> {
-        let headers = try!(r.headers());
+        let headers = r.headers()?;
 
         let get_optional_pos = |name| headers.iter().position(|s| s == name);
         let get_pos = |field| {
@@ -74,8 +74,8 @@ impl<'a, R: std::io::Read + 'a> RecordIter<'a, R> {
 
         Ok(RecordIter {
                iter: r.records(),
-               id_pos: try!(get_pos(heading_id)),
-               name_pos: try!(get_pos(heading_name)),
+               id_pos: get_pos(heading_id)?,
+               name_pos: get_pos(heading_name)?,
            })
     }
 }
@@ -91,8 +91,8 @@ impl<'a, R: std::io::Read + 'a> Iterator for RecordIter<'a, R> {
 
         self.iter.next().map(|r| {
             r.and_then(|r| {
-                let id = try!(get(&r, self.id_pos)).to_string();
-                let name = try!(get(&r, self.name_pos)).to_string();
+                let id = get(&r, self.id_pos)?.to_string();
+                let name = get(&r, self.name_pos)?.to_string();
                 Ok(Record {
                        id: id,
                        name: name,
@@ -177,7 +177,7 @@ fn main() {
     let mut wtr_stops = args.output.as_ref().map(|f| csv::Writer::from_file(f).unwrap());
     wtr_stops.as_mut().map(|w| w.encode(headers).unwrap());
 
-    // creating aspell manager (and populate dictionnary if requested)
+    // creating ispell manager (and populate dictionnary if requested)
     let mut ispell = SpellCheck::new().unwrap();
     if let Some(bano_file) = args.bano {
         populate_dict_from_bano_file(&bano_file, &mut ispell);
@@ -191,7 +191,7 @@ fn main() {
         wtr_stops.as_mut().map(|w| w.encode(&rec.raw).unwrap());
     }
 
-    println!("Aspell replaced {} words and produced {} error",
+    println!("Ispell replaced {} words and produced {} error",
              ispell.nb_replace(),
              ispell.nb_error());
 }

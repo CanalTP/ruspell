@@ -1,6 +1,7 @@
 use encoding::Encoding;
 use encoding::all::{ISO_8859_15, WINDOWS_1252};
 use encoding::EncoderTrap;
+
 pub fn decode(name: String) -> String {
     let latin9 = ISO_8859_15;
     if let Ok(Ok(res)) = latin9.encode(&name, EncoderTrap::Strict).map(String::from_utf8) {

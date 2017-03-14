@@ -1,15 +1,16 @@
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
-use ispell::SpellLauncher;
+use ::*;
 
 pub struct SpellCheck {
-    aspell: ::ispell::SpellChecker,
+    aspell: ispell::SpellChecker,
     nb_replace: u32,
     nb_error: u32,
 }
 impl SpellCheck {
-    pub fn new() -> ::std::result::Result<Self, String> {
-        if let Ok(aspell_checker) = SpellLauncher::new().aspell().dictionary("fr").launch() {
+    pub fn new() -> std::result::Result<Self, String> {
+        if let Ok(aspell_checker) =
+            ispell::SpellLauncher::new().aspell().dictionary("fr").launch() {
             Ok(SpellCheck {
                    aspell: aspell_checker,
                    nb_replace: 0,
@@ -28,7 +29,7 @@ impl SpellCheck {
         self.nb_replace
     }
 
-    pub fn add_word(&mut self, new_word: &str) -> ::ispell::Result<()> {
+    pub fn add_word(&mut self, new_word: &str) -> ispell::Result<()> {
         self.aspell.add_word(new_word)
     }
 
@@ -45,12 +46,6 @@ impl SpellCheck {
         let misspelt_errors = errors_res.unwrap();
 
         for e in misspelt_errors {
-            /*println!("'{}' (pos: {}) is misspelled!", &e.misspelled, e.position);
-            if !e.suggestions.is_empty() {
-                println!("Maybe you meant : '{:?}'?", &e.suggestions[0]);
-            } else {
-                println!("Nothing better to offer...");
-            }*/
             let mut valid_suggestions = vec![];
 
             for s in e.suggestions {
@@ -62,7 +57,7 @@ impl SpellCheck {
                 self.nb_replace += 1;
                 name = name.replace(&e.misspelled, &valid_suggestions[0]);
             } else if valid_suggestions.len() > 1 {
-                println!("Ambiguous suggestions for {} : {:?}",
+                println!("Aspell ambiguous suggestions for {} : {:?}",
                          e.misspelled,
                          valid_suggestions);
             }
@@ -80,15 +75,11 @@ fn is_suggestion_qualified(original: &str, suggestion: &str) -> bool {
         .filter(|c| !is_combining_mark(*c))
         .flat_map(char::to_lowercase)
         .collect();
-    // valid IF original word has no accent
-    //   AND normalized versions are the same
-    //   AND suggestion adds accent
+    // valid IF original word has no accent AND
+    //   normalized versions are the same AND
+    //   suggestion adds accent
     if original.len() == normed_orig.len() && normed_orig == normed_sugg &&
        original.len() < suggestion.len() {
-        /*println!("REPLACE VALID  : {} > {} ({})",
-                             &original,
-                             &suggestion,
-                             name);*/
         true
     } else {
         false
