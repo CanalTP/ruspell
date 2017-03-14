@@ -134,17 +134,15 @@ struct RecordRule {
 
 use utils::*;
 use regex_wrapper::*;
-/// management of all names
+/// management of all processing applied to names
 fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Option<RecordRule> {
     let mut new_name = decode(rec.name.clone());
+
     new_name = snake_case(new_name);
 
-    let mut tmp = String::new();
-    for word in get_words(&new_name) {
-        tmp.push_str(&sed_all(word.to_string()));
-    }
+    new_name = fixed_case_word(new_name);
 
-    new_name = regex_all_name(tmp);
+    new_name = sed_whole_name(new_name);
 
     new_name = ispell.check(new_name);
 
@@ -167,39 +165,33 @@ use bano_reader::*;
 fn main() {
     let args = Args::from_args();
 
-    let mut rdr = csv::Reader::from_file(args.input).unwrap().double_quote(true);
-
+    let mut rdr_stops = csv::Reader::from_file(args.input).unwrap().double_quote(true);
     let (records, headers, name_pos) =
-        new_record_iter(&mut rdr, &args.heading_id, &args.heading_name);
+        new_record_iter(&mut rdr_stops, &args.heading_id, &args.heading_name);
 
+    // producing rules to be applied to re-spell names
     let mut wtr_rules = csv::Writer::from_file(args.rules).unwrap();
     wtr_rules.encode(("id", "old_name", "new_name")).unwrap();
 
+    // producing output and replacing names only if requested (wtr_stops is an Option)
     let mut wtr_stops = args.output.as_ref().map(|f| csv::Writer::from_file(f).unwrap());
     wtr_stops.as_mut().map(|w| w.encode(headers).unwrap());
 
-    let mut aspell = SpellCheck::new().unwrap();
+    // creating aspell manager (and populate dictionnary if requested)
+    let mut ispell = SpellCheck::new().unwrap();
     if let Some(bano_file) = args.bano {
-        populate_dict_from_bano_file(&bano_file, &mut aspell);
+        populate_dict_from_bano_file(&bano_file, &mut ispell);
     }
 
     for mut rec in records {
-        if let Some(rule) = process_record(&rec, &mut aspell) {
+        if let Some(rule) = process_record(&rec, &mut ispell) {
             rec.raw[name_pos] = rule.new_name.clone();
-
             wtr_rules.encode(&rule).unwrap();
         }
-
         wtr_stops.as_mut().map(|w| w.encode(&rec.raw).unwrap());
     }
 
-    println!("replace: {} error: {}", aspell.nb_replace(), aspell.nb_error());
+    println!("Aspell replaced {} words and produced {} error",
+             ispell.nb_replace(),
+             ispell.nb_error());
 }
-
-// TODO :
-// "12eme"" minuscules (attention terminal et cdg...),
-// sigles bien capitalisés d'avance  mais perdus
-// ajouts des tirets aux noms de ville pas faits (et peut-être pas simple à faire?)
-// "prés hauts" ? > si plusieurs OK, pas de chgt et trace... à voir
-// essayer de vider le dictionnaire?
-

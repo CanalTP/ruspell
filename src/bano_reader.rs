@@ -114,4 +114,3 @@ fn new_bano_iter<'a, R: std::io::Read + 'a>
 
     rec_iter.filter_map(reader_handler)
 }
-
