@@ -9,11 +9,7 @@ pub struct SpellCheck {
 }
 impl SpellCheck {
     pub fn new() -> ::std::result::Result<Self, String> {
-        if let Ok(aspell_checker) =
-            SpellLauncher::new()
-                .aspell()
-                .dictionary("fr")
-                .launch() {
+        if let Ok(aspell_checker) = SpellLauncher::new().aspell().dictionary("fr").launch() {
             Ok(SpellCheck {
                    aspell: aspell_checker,
                    nb_replace: 0,
@@ -98,4 +94,3 @@ fn is_suggestion_qualified(original: &str, suggestion: &str) -> bool {
         false
     }
 }
-

@@ -1,12 +1,16 @@
 use regex::Regex;
 use regex::RegexSet;
 use regex::Captures;
+use ::*;
 
 
 fn must_be_lower(text: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex =
-            Regex::new(r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|au|aux|un|une|à|\d+([eè]me|[eè]re?|nde?))$").unwrap();
+        static ref RE: RegexSet =
+            RegexSet::new(&[
+                r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|au|aux|un|une)$",
+                r"(?i)^(à|\d+([eè]me|[eè]re?|nde?))$",
+                ]).unwrap();
     }
     RE.is_match(text)
 }
@@ -24,27 +28,22 @@ fn must_be_upper(text: &str) -> bool {
     RE.is_match(text)
 }
 
-pub fn sed_all(name: String) -> String {
-    if must_be_lower(&name) {
-        return name.to_lowercase();
+pub fn fixed_case_word(name: String) -> String {
+    let mut new_name = String::new();
+    for word in get_words(&name) {
+        if must_be_lower(&word) {
+            new_name.push_str(&word.to_lowercase());
+        } else if must_be_upper(&word) {
+            new_name.push_str(&word.to_uppercase());
+        } else {
+            new_name.push_str(word);
+        }
     }
-
-    if must_be_upper(&name) {
-        return name.to_uppercase();
-    }
-
-    let lower_case = name.to_lowercase();
-    if lower_case == "gal" {
-        return "Général".to_string();
-    } else if lower_case == "mal" {
-        return "Maréchal".to_string();
-    }
-
-    name
+    new_name
 }
 
 
-pub fn regex_all_name(name: String) -> String {
+pub fn sed_whole_name(name: String) -> String {
     lazy_static! {
         static ref RE_SAINT: Regex =
             Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W+").unwrap();
@@ -127,6 +126,18 @@ pub fn regex_all_name(name: String) -> String {
     let res = RE_SPACES.replace_all(&res, " ");
 
     lazy_static! {
+        static ref RE_GENERAL: Regex =
+            Regex::new(r"(?i)(^|\W)gal(\W|$)").unwrap();
+    }
+    let res = RE_GENERAL.replace_all(&res, "${1}Général${2}");
+
+    lazy_static! {
+        static ref RE_MARECHAL: Regex =
+            Regex::new(r"(?i)(^|\W)mal(\W|$)").unwrap();
+    }
+    let res = RE_MARECHAL.replace_all(&res, "${1}Maréchal${2}");
+
+    lazy_static! {
         static ref RE_QUOTE: Regex =
             Regex::new(r"(?i)(^|\W)([ld])[e]?[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
     }
@@ -136,4 +147,3 @@ pub fn regex_all_name(name: String) -> String {
 
     res.into_owned()
 }
-

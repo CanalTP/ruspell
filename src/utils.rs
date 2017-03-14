@@ -62,4 +62,3 @@ pub fn snake_case(name: String) -> String {
     }
     new_name
 }
-
