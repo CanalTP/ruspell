@@ -199,6 +199,7 @@ fn main() {
 // TODO :
 // "12eme"" minuscules (attention terminal et cdg...),
 // sigles bien capitalisés d'avance  mais perdus
+// ajouts des tirets aux noms de ville pas faits (et peut-être pas simple à faire?)
 // "prés hauts" ? > si plusieurs OK, pas de chgt et trace... à voir
 // essayer de vider le dictionnaire?
 

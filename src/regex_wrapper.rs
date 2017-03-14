@@ -6,7 +6,7 @@ use regex::Captures;
 fn must_be_lower(text: &str) -> bool {
     lazy_static! {
         static ref RE: Regex =
-            Regex::new(r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|au|aux|un|une|à)$").unwrap();
+            Regex::new(r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|au|aux|un|une|à|\d+([eè]me|[eè]re?|nde?))$").unwrap();
     }
     RE.is_match(text)
 }
@@ -16,7 +16,8 @@ fn must_be_upper(text: &str) -> bool {
         static ref RE: RegexSet =
             RegexSet::new(&[
                 r"(?i)^(RER|CDG|CES|ASPTT|PTT|EDF|GDF|INRIA|INRA|CRC|HEC|SNCF|RATP|HLM|CHR|CHU)$",
-                r"(?i)^(ZA|ZAC|ZI|RPA|CFA|CEA|CC|IUT|TGV|CCI|UFR|CPAM|ANPE|RN\d*|\w*\d\w*|RD\d*)$",
+                r"(?i)^(KFC|MJC|IME|CAT|DDE|LEP|EGB|SNECMA|DGAT|VVF)$",
+                r"(?i)^(ZA|ZAC|ZI|RPA|CFA|CEA|CC|IUT|TGV|CCI|UFR|CPAM|ANPE|\w*\d\w*|RN\d*|RD\d*)$",
                 r"(?i)^(XL|X{0,3})(IX|IV|V?I{0,3})$",
                 ]).unwrap();
     }
@@ -80,10 +81,32 @@ pub fn regex_all_name(name: String) -> String {
     let res = RE_AVENUE.replace_all(&res, "${1}Avenue${2}");
 
     lazy_static! {
-        static ref RE_LIEU_DIT: Regex =
+        static ref RE_ROUTE: Regex =
             Regex::new(r"(?i)(^|\W)rte(\W|$)").unwrap();
     }
-    let res = RE_LIEU_DIT.replace_all(&res, "${1}Route${2}");
+    let res = RE_ROUTE.replace_all(&res, "${1}Route${2}");
+
+    lazy_static! {
+        static ref RE_DU_NUM: Regex =
+            Regex::new(r"(?i)(^|\W)(du|de la) (\d+)e(\W|$)").unwrap();
+    }
+    let res = RE_DU_NUM.replace_all(&res, "${1}${2} ${3}ème${4}");
+    lazy_static! {
+        static ref RE_DU_PREMIER: Regex =
+            Regex::new(r"(?i)(^|\W)du 1ème(\W|$)").unwrap();
+    }
+    let res = RE_DU_PREMIER.replace_all(&res, "${1}du 1er${2}");
+    lazy_static! {
+        static ref RE_DE_LA_PREMIERE: Regex =
+            Regex::new(r"(?i)(^|\W)de la 1ème(\W|$)").unwrap();
+    }
+    let res = RE_DE_LA_PREMIERE.replace_all(&res, "${1}de la 1ère${2}");
+
+    lazy_static! {
+        static ref RE_HOTEL_DE_VILLE: Regex =
+            Regex::new(r"(?i)(^|\W)hdv(\W|$)").unwrap();
+    }
+    let res = RE_HOTEL_DE_VILLE.replace_all(&res, "${1}Hôtel de Ville${2}");
 
     lazy_static! {
         static ref RE_A: Regex =
@@ -105,7 +128,7 @@ pub fn regex_all_name(name: String) -> String {
 
     lazy_static! {
         static ref RE_QUOTE: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+            Regex::new(r"(?i)(^|\W)([ld])[e]?[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
     }
     let res = RE_QUOTE.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
