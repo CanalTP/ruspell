@@ -1,7 +1,5 @@
-use regex::Regex;
-use regex::RegexSet;
-use regex::Captures;
-use ::*;
+use regex::{Regex, RegexSet, Captures};
+use utils;
 
 
 fn must_be_lower(text: &str) -> bool {
@@ -30,7 +28,7 @@ fn must_be_upper(text: &str) -> bool {
 
 pub fn fixed_case_word(name: String) -> String {
     let mut new_name = String::new();
-    for word in get_words(&name) {
+    for word in utils::get_words(&name) {
         if must_be_lower(&word) {
             new_name.push_str(&word.to_lowercase());
         } else if must_be_upper(&word) {
