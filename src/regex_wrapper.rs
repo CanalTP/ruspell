@@ -138,10 +138,18 @@ pub fn sed_whole_name(name: String) -> String {
     let res = RE_MARECHAL.replace_all(&res, "${1}Maréchal${2}");
 
     lazy_static! {
-        static ref RE_QUOTE: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])[e]?[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+        static ref RE_QUOTE_H: Regex =
+            Regex::new(r"(?i)(^|\W)([ld])[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
     }
-    let res = RE_QUOTE.replace_all(&res, |caps: &Captures| {
+    let res = RE_QUOTE_H.replace_all(&res, |caps: &Captures| {
+        format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
+    });
+
+    lazy_static! {
+        static ref RE_QUOTE_DE: Regex =
+            Regex::new(r"(?i)(^|\W)([ld])e[ ']([aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+    }
+    let res = RE_QUOTE_DE.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
     });
 
