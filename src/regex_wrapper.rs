@@ -47,11 +47,6 @@ pub fn sed_whole_name(name: String) -> String {
             Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W+").unwrap();
     }
     let res = RE_SAINT.replace_all(&name, "${1}Saint${2}-");
-    lazy_static! {
-        static ref RE_SAINT_LOUIS: Regex =
-            Regex::new(r"(?i)(^|\W)Saint-Louis(\W|$)").unwrap();
-    }
-    let res = RE_SAINT_LOUIS.replace_all(&res, "${1}Saint Louis${2}");
 
     lazy_static! {
         static ref RE_ND: Regex =
