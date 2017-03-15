@@ -16,6 +16,7 @@ mod ispell_wrapper;
 mod bano_reader;
 
 use structopt::StructOpt;
+use ispell_wrapper::SpellCheck;
 
 #[derive(StructOpt)]
 struct Args {
@@ -132,21 +133,17 @@ struct RecordRule {
 }
 
 
-use utils::*;
-use regex_wrapper::*;
 /// management of all processing applied to names
 fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Option<RecordRule> {
-    let mut new_name = decode(rec.name.clone());
+    use utils;
+    use regex_wrapper;
 
-    new_name = snake_case(new_name);
-
-    new_name = fixed_case_word(new_name);
-
-    new_name = sed_whole_name(new_name);
-
+    let mut new_name = utils::decode(rec.name.clone());
+    new_name = utils::snake_case(new_name);
+    new_name = regex_wrapper::fixed_case_word(new_name);
+    new_name = regex_wrapper::sed_whole_name(new_name);
     new_name = ispell.check(new_name);
-
-    new_name = first_upper(new_name);
+    new_name = utils::first_upper(new_name);
 
     if rec.name == new_name {
         None
@@ -160,9 +157,9 @@ fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Option<RecordRule> {
 }
 
 
-use ispell_wrapper::*;
-use bano_reader::*;
 fn main() {
+    use bano_reader;
+
     let args = Args::from_args();
 
     let mut rdr_stops = csv::Reader::from_file(args.input).unwrap().double_quote(true);
@@ -180,7 +177,7 @@ fn main() {
     // creating ispell manager (and populate dictionnary if requested)
     let mut ispell = SpellCheck::new().unwrap();
     if let Some(bano_file) = args.bano {
-        populate_dict_from_bano_file(&bano_file, &mut ispell);
+        bano_reader::populate_dict_from_file(&bano_file, &mut ispell);
     }
 
     for mut rec in records {

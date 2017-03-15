@@ -1,6 +1,6 @@
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
-use ::*;
+use ispell;
 
 pub struct SpellCheck {
     aspell: ispell::SpellChecker,
@@ -8,17 +8,14 @@ pub struct SpellCheck {
     nb_error: u32,
 }
 impl SpellCheck {
-    pub fn new() -> std::result::Result<Self, String> {
-        if let Ok(aspell_checker) =
-            ispell::SpellLauncher::new().aspell().dictionary("fr").launch() {
-            Ok(SpellCheck {
-                   aspell: aspell_checker,
-                   nb_replace: 0,
-                   nb_error: 0,
-               })
-        } else {
-            Err("Impossible to launch aspell".to_string())
-        }
+    pub fn new() -> ispell::Result<Self> {
+        Ok(SpellCheck {
+               aspell: ispell::SpellLauncher::new().aspell()
+                   .dictionary("fr")
+                   .launch()?,
+               nb_replace: 0,
+               nb_error: 0,
+           })
     }
 
     pub fn nb_error(&self) -> u32 {

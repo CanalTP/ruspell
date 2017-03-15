@@ -1,8 +1,11 @@
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 use std::collections::HashMap;
+use std::iter::FilterMap;
+use std::{io, mem};
+use csv;
 
-pub fn populate_dict_from_bano_file(file: &str, ispell: &mut ::ispell_wrapper::SpellCheck) {
+pub fn populate_dict_from_file(file: &str, ispell: &mut ::ispell_wrapper::SpellCheck) {
     println!("Reading street and city names from {}", file);
 
     let mut rdr = csv::Reader::from_file(file).unwrap().double_quote(true);
@@ -52,11 +55,11 @@ fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
     }
     let mut second_max_w = map_iter.next().unwrap();
     if second_max_w.1 > first_max_w.1 {
-        std::mem::swap(&mut second_max_w, &mut first_max_w);
+        mem::swap(&mut second_max_w, &mut first_max_w);
     }
     for i in map_iter {
         if i.1 > first_max_w.1 {
-            std::mem::swap(&mut second_max_w, &mut first_max_w);
+            mem::swap(&mut second_max_w, &mut first_max_w);
             first_max_w = i;
         } else if i.1 > second_max_w.1 {
             second_max_w = i;
@@ -76,13 +79,12 @@ struct Bano {
     pub city: String,
 }
 
-use ::*;
-struct BanoIter<'a, R: std::io::Read + 'a> {
+struct BanoIter<'a, R: io::Read + 'a> {
     iter: csv::StringRecords<'a, R>,
     street_pos: usize,
     city_pos: usize,
 }
-impl<'a, R: std::io::Read + 'a> BanoIter<'a, R> {
+impl<'a, R: io::Read + 'a> BanoIter<'a, R> {
     fn new(r: &'a mut csv::Reader<R>) -> csv::Result<Self> {
         Ok(BanoIter {
                iter: r.records(),
@@ -91,7 +93,7 @@ impl<'a, R: std::io::Read + 'a> BanoIter<'a, R> {
            })
     }
 }
-impl<'a, R: std::io::Read + 'a> Iterator for BanoIter<'a, R> {
+impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
     type Item = csv::Result<Bano>;
     fn next(&mut self) -> Option<Self::Item> {
         fn get(record: &[String], pos: usize) -> csv::Result<&str> {
@@ -114,9 +116,9 @@ impl<'a, R: std::io::Read + 'a> Iterator for BanoIter<'a, R> {
     }
 }
 
-fn new_bano_iter<'a, R: std::io::Read + 'a>
+fn new_bano_iter<'a, R: io::Read + 'a>
     (r: &'a mut csv::Reader<R>)
-     -> std::iter::FilterMap<BanoIter<'a, R>, fn(csv::Result<Bano>) -> Option<Bano>> {
+     -> FilterMap<BanoIter<'a, R>, fn(csv::Result<Bano>) -> Option<Bano>> {
     fn reader_handler(rc: csv::Result<Bano>) -> Option<Bano> {
         rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
     }
