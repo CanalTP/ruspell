@@ -78,6 +78,8 @@ fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Result<Option<Record
     new_name = ispell.check(&new_name)?;
     new_name = utils::first_upper(&new_name);
 
+    regex_wrapper::log_suspicious(&new_name);
+
     if rec.name == new_name {
         Ok(None)
     } else {
