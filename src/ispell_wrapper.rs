@@ -1,6 +1,7 @@
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 use ispell;
+use errors::{Result, ResultExt};
 
 pub struct SpellCheck {
     aspell: ispell::SpellChecker,
@@ -8,7 +9,7 @@ pub struct SpellCheck {
     nb_error: u32,
 }
 impl SpellCheck {
-    pub fn new() -> ispell::Result<Self> {
+    pub fn new() -> Result<Self> {
         Ok(SpellCheck {
                aspell: ispell::SpellLauncher::new().aspell()
                    .dictionary("fr")
@@ -26,21 +27,21 @@ impl SpellCheck {
         self.nb_replace
     }
 
-    pub fn add_word(&mut self, new_word: &str) -> ispell::Result<()> {
-        self.aspell.add_word(new_word)
+    pub fn add_word(&mut self, new_word: &str) -> Result<()> {
+        Ok(self.aspell.add_word(new_word)?)
     }
 
-    pub fn check(&mut self, mut name: String) -> String {
+    pub fn check(&mut self, mut name: String) -> Result<String> {
 
         let errors_res = self.aspell.check(&name);
         if let Err(e) = errors_res {
             print!("{:?}", e);
             println!(" ({})", name);
             self.nb_error += 1;
-            return name;
+            return Ok(name);
         }
 
-        let misspelt_errors = errors_res.unwrap();
+        let misspelt_errors = errors_res.chain_err(|| "Could not perform check using aspell")?;
 
         for e in misspelt_errors {
             let mut valid_suggestions = vec![];
@@ -59,7 +60,7 @@ impl SpellCheck {
                          valid_suggestions);
             }
         }
-        name
+        Ok(name)
     }
 }
 

@@ -4,11 +4,15 @@ use std::collections::HashMap;
 use std::iter::FilterMap;
 use std::{io, mem};
 use csv;
+use errors::{Result, ResultExt};
 
-pub fn populate_dict_from_file(file: &str, ispell: &mut ::ispell_wrapper::SpellCheck) {
+pub fn populate_dict_from_file(file: &str,
+                               ispell: &mut ::ispell_wrapper::SpellCheck)
+                               -> Result<()> {
     println!("Reading street and city names from {}", file);
 
-    let mut rdr = csv::Reader::from_file(file).unwrap().double_quote(true);
+    let mut rdr =
+        csv::Reader::from_file(file).chain_err(|| "Could not open BANO file")?.double_quote(true);
     let banos = new_bano_iter(&mut rdr);
 
     // This map is built as follows :
@@ -38,17 +42,18 @@ pub fn populate_dict_from_file(file: &str, ispell: &mut ::ispell_wrapper::SpellC
         if let Some(interesting_word) = get_interesting_word(map) {
             // adding word only if it has accent
             if interesting_word.len() > normed_w.len() {
-                ispell.add_word(&interesting_word).unwrap();
+                let _ = ispell.add_word(&interesting_word);
                 nb_added += 1;
             }
         }
     }
     println!("Added {} words to dictionnary", nb_added);
+    Ok(())
 }
 
 fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
     let mut map_iter = map.iter();
-    let mut first_max_w = map_iter.next().unwrap();
+    let mut first_max_w = map_iter.next().expect("This map should never be empty");
     // if a normed word only appears written one way, it is qualified
     if map.len() == 1 {
         return Some(first_max_w.0.clone());
