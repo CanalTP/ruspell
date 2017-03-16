@@ -107,6 +107,12 @@ pub fn sed_whole_name(name: &str) -> String {
     let res = RE_A.replace_all(&res, " à ");
 
     lazy_static! {
+        static ref RE_BACKQUOTE: Regex =
+            Regex::new(r"(?i)’").unwrap();
+    }
+    let res = RE_BACKQUOTE.replace_all(&res, "'");
+
+    lazy_static! {
         static ref RE_ROND_POINT: Regex =
             Regex::new(r"(?i)(^|\W)ro?n?d[ \.-]?po?i?n?t(\W|$)").unwrap();
     }
@@ -114,9 +120,15 @@ pub fn sed_whole_name(name: &str) -> String {
 
     lazy_static! {
         static ref RE_SPACES: Regex =
-            Regex::new(r"(?i)  +").unwrap();
+            Regex::new(r"(?i)[_ ]+").unwrap();
     }
     let res = RE_SPACES.replace_all(&res, " ");
+
+    lazy_static! {
+        static ref RE_SPACE_DASH: Regex =
+            Regex::new(r"(?i)(^|[^ ])(?: -|- )([^ ]|$)").unwrap();
+    }
+    let res = RE_SPACE_DASH.replace_all(&res, "${1} - ${2}");
 
     lazy_static! {
         static ref RE_GENERAL: Regex =
@@ -132,7 +144,7 @@ pub fn sed_whole_name(name: &str) -> String {
 
     lazy_static! {
         static ref RE_QUOTE_H: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])[ '](h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+            Regex::new(r"(?i)(^|\W)([ld])[ ']+(h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
     }
     let res = RE_QUOTE_H.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
@@ -140,11 +152,38 @@ pub fn sed_whole_name(name: &str) -> String {
 
     lazy_static! {
         static ref RE_QUOTE_DE: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])e[ ']([aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+            Regex::new(r"(?i)(^|\W)([ld])e[ ']+([aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
     }
     let res = RE_QUOTE_DE.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
     });
 
+    lazy_static! {
+        static ref RE_DE_LE: Regex =
+            Regex::new(r"(?i)(^|\W)de le(\W|$)").unwrap();
+    }
+    let res = RE_DE_LE.replace_all(&res, "${1}du${2}");
+    lazy_static! {
+        static ref RE_DE_LES: Regex =
+            Regex::new(r"(?i)(^|\W)de les(\W|$)").unwrap();
+    }
+    let res = RE_DE_LES.replace_all(&res, "${1}des${2}");
+
     res.into_owned()
+}
+
+
+pub fn log_suspicious(name: &str) {
+    lazy_static! {
+        static ref RE_SUSPICIOUS: Regex =
+            Regex::new(r"(?i)[^\w '-/\(\)\.]").unwrap();
+    }
+    for m in RE_SUSPICIOUS.find_iter(name) {
+        println!("Warning: suspicious character {} in name {}",
+                 m.as_str(),
+                 name);
+    }
+    if name.contains(',') {
+        println!("Warning: suspicious character , in name {}", name);
+    }
 }
