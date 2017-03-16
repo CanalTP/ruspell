@@ -31,7 +31,7 @@ pub fn populate_dict_from_file(file: &str,
                 .filter(|c| !is_combining_mark(*c))
                 .flat_map(char::to_lowercase)
                 .collect();
-            let map = map_normed.entry(normed_w).or_insert(HashMap::new());
+            let map = map_normed.entry(normed_w).or_insert_with(HashMap::new);
             let counter = map.entry(w.to_string()).or_insert(0);
             *counter += 1;
         }
@@ -39,7 +39,7 @@ pub fn populate_dict_from_file(file: &str,
 
     let mut nb_added = 0;
     for (normed_w, map) in map_normed {
-        if let Some(interesting_word) = get_interesting_word(map) {
+        if let Some(interesting_word) = get_interesting_word(&map) {
             // adding word only if it has accent
             if interesting_word.len() > normed_w.len() {
                 let _ = ispell.add_word(&interesting_word);
@@ -51,7 +51,7 @@ pub fn populate_dict_from_file(file: &str,
     Ok(())
 }
 
-fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
+fn get_interesting_word(map: &HashMap<String, u32>) -> Option<String> {
     let mut map_iter = map.iter();
     let mut first_max_w = map_iter.next().expect("This map should never be empty");
     // if a normed word only appears written one way, it is qualified
@@ -71,7 +71,7 @@ fn get_interesting_word(map: HashMap<String, u32>) -> Option<String> {
         }
     }
     // first and second max contain the 2 forms appearing more and their occurences
-    // if the first form appears more than 4 (empirical) times the second one, it is qualified
+    // if the first form appears 4 times (empirical) more than the second one, it is qualified
     if (first_max_w.1 / second_max_w.1) >= 4 {
         return Some(first_max_w.0.clone());
     }
@@ -121,9 +121,10 @@ impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
     }
 }
 
-fn new_bano_iter<'a, R: io::Read + 'a>
-    (r: &'a mut csv::Reader<R>)
-     -> FilterMap<BanoIter<'a, R>, fn(csv::Result<Bano>) -> Option<Bano>> {
+type CompleteBanoIterator<'a, R> = FilterMap<BanoIter<'a, R>,
+                                             fn(csv::Result<Bano>) -> Option<Bano>>;
+
+fn new_bano_iter<R: io::Read>(r: &mut csv::Reader<R>) -> CompleteBanoIterator<R> {
     fn reader_handler(rc: csv::Result<Bano>) -> Option<Bano> {
         rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
     }

@@ -71,12 +71,12 @@ fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Result<Option<Record
     use utils;
     use regex_wrapper;
 
-    let mut new_name = utils::decode(rec.name.clone());
-    new_name = utils::snake_case(new_name);
-    new_name = regex_wrapper::fixed_case_word(new_name);
-    new_name = regex_wrapper::sed_whole_name(new_name);
-    new_name = ispell.check(new_name)?;
-    new_name = utils::first_upper(new_name);
+    let mut new_name = utils::decode(&rec.name.clone());
+    new_name = utils::snake_case(&new_name);
+    new_name = regex_wrapper::fixed_case_word(&new_name);
+    new_name = regex_wrapper::sed_whole_name(&new_name);
+    new_name = ispell.check(&new_name)?;
+    new_name = utils::first_upper(&new_name);
 
     if rec.name == new_name {
         Ok(None)
@@ -99,7 +99,7 @@ fn run() -> Result<()> {
         .chain_err(|| "Could not open input file")?
         .double_quote(true);
     let (records, headers, name_pos) =
-        records_reader::new_record_iter(&mut rdr_stops, &args.heading_id, &args.heading_name);
+        records_reader::new_record_iter(&mut rdr_stops, &args.heading_id, &args.heading_name)?;
 
     // producing rules to be applied to re-spell names
     let mut wtr_rules =
