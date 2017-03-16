@@ -77,6 +77,6 @@ fn is_suggestion_qualified(original: &str, suggestion: &str) -> bool {
     // valid IF original word has no accent AND
     //   normalized versions are the same AND
     //   suggestion adds accent
-    original.len() == normed_orig.len() && normed_orig == normed_sugg &&
-    original.len() < suggestion.len()
+    !original.nfkd().any(is_combining_mark) && normed_orig == normed_sugg &&
+    suggestion.nfkd().any(is_combining_mark)
 }
