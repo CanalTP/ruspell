@@ -26,12 +26,12 @@ fn must_be_upper(text: &str) -> bool {
     RE.is_match(text)
 }
 
-pub fn fixed_case_word(name: String) -> String {
+pub fn fixed_case_word(name: &str) -> String {
     let mut new_name = String::new();
-    for word in utils::get_words(&name) {
-        if must_be_lower(&word) {
+    for word in utils::get_words(name) {
+        if must_be_lower(word) {
             new_name.push_str(&word.to_lowercase());
-        } else if must_be_upper(&word) {
+        } else if must_be_upper(word) {
             new_name.push_str(&word.to_uppercase());
         } else {
             new_name.push_str(word);
@@ -41,12 +41,12 @@ pub fn fixed_case_word(name: String) -> String {
 }
 
 
-pub fn sed_whole_name(name: String) -> String {
+pub fn sed_whole_name(name: &str) -> String {
     lazy_static! {
         static ref RE_SAINT: Regex =
             Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W+").unwrap();
     }
-    let res = RE_SAINT.replace_all(&name, "${1}Saint${2}-");
+    let res = RE_SAINT.replace_all(name, "${1}Saint${2}-");
 
     lazy_static! {
         static ref RE_ND: Regex =

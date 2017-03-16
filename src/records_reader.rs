@@ -1,6 +1,7 @@
 use csv;
 use std::io;
 use std::iter::FilterMap;
+use errors::{Result, ResultExt};
 
 
 #[derive(Debug)]
@@ -58,18 +59,21 @@ impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
 }
 
 
+type CompleteRecordIterator<'a, R> = FilterMap<RecordIter<'a, R>,
+                                               fn(csv::Result<Record>) -> Option<Record>>;
+
 pub fn new_record_iter<'a, R: io::Read + 'a>
     (r: &'a mut csv::Reader<R>,
      heading_id: &str,
      heading_name: &str)
--> (FilterMap<RecordIter<'a, R>, fn(csv::Result<Record>) -> Option<Record>>, Vec<String>, usize){
+     -> Result<(CompleteRecordIterator<'a, R>, Vec<String>, usize)> {
     fn reader_handler(rc: csv::Result<Record>) -> Option<Record> {
         rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
     }
-    let headers = r.headers().unwrap_or(vec![]);
+    let headers = r.headers().chain_err(|| "Can't find headers in input file")?;
     let rec_iter = RecordIter::new(r, heading_id, heading_name)
-        .expect("Can't find needed fields in the header.");
+        .chain_err(|| "Can't find needed fields in the header of input file")?;
     let pos = rec_iter.name_pos;
 
-    (rec_iter.filter_map(reader_handler), headers, pos)
+    Ok((rec_iter.filter_map(reader_handler), headers, pos))
 }

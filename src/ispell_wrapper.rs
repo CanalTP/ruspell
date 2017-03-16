@@ -31,14 +31,15 @@ impl SpellCheck {
         Ok(self.aspell.add_word(new_word)?)
     }
 
-    pub fn check(&mut self, mut name: String) -> Result<String> {
+    pub fn check(&mut self, name: &str) -> Result<String> {
 
-        let errors_res = self.aspell.check(&name);
+        let errors_res = self.aspell.check(name);
+        let mut new_name = name.to_string();
         if let Err(e) = errors_res {
             print!("{:?}", e);
             println!(" ({})", name);
             self.nb_error += 1;
-            return Ok(name);
+            return Ok(new_name);
         }
 
         let misspelt_errors = errors_res.chain_err(|| "Could not perform check using aspell")?;
@@ -53,14 +54,14 @@ impl SpellCheck {
             }
             if valid_suggestions.len() == 1 {
                 self.nb_replace += 1;
-                name = name.replace(&e.misspelled, &valid_suggestions[0]);
+                new_name = new_name.replace(&e.misspelled, &valid_suggestions[0]);
             } else if valid_suggestions.len() > 1 {
                 println!("Aspell ambiguous suggestions for {} : {:?}",
                          e.misspelled,
                          valid_suggestions);
             }
         }
-        Ok(name)
+        Ok(new_name)
     }
 }
 
@@ -76,10 +77,6 @@ fn is_suggestion_qualified(original: &str, suggestion: &str) -> bool {
     // valid IF original word has no accent AND
     //   normalized versions are the same AND
     //   suggestion adds accent
-    if original.len() == normed_orig.len() && normed_orig == normed_sugg &&
-       original.len() < suggestion.len() {
-        true
-    } else {
-        false
-    }
+    original.len() == normed_orig.len() && normed_orig == normed_sugg &&
+    original.len() < suggestion.len()
 }
