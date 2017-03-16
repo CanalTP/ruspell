@@ -2,7 +2,7 @@ use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 use std::collections::HashMap;
 use std::iter::FilterMap;
-use std::{io, mem};
+use std::io;
 use csv;
 use errors::{Result, ResultExt};
 
@@ -17,8 +17,8 @@ pub fn populate_dict_from_file(file: &str,
 
     // This map is built as follows :
     // map_normed["napoleon"] = map_napo
-    // map_napo["Napoléon"] = 42 (occurancies)
-    // map_napo["Napoleon"] = 2 (occurancies)
+    // map_napo["Napoléon"] = 42 (occurences)
+    // map_napo["Napoleon"] = 2 (occurences)
     let mut map_normed = HashMap::new();
 
     for b in banos {
@@ -32,17 +32,16 @@ pub fn populate_dict_from_file(file: &str,
                 .flat_map(char::to_lowercase)
                 .collect();
             let map = map_normed.entry(normed_w).or_insert_with(HashMap::new);
-            let counter = map.entry(w.to_string()).or_insert(0);
-            *counter += 1;
+            *map.entry(w.to_string()).or_insert(0) += 1;
         }
     }
 
     let mut nb_added = 0;
-    for (normed_w, map) in map_normed {
-        if let Some(interesting_word) = get_interesting_word(&map) {
+    for map in map_normed.values() {
+        if let Some(interesting_word) = get_interesting_word(map) {
             // adding word only if it has accent
-            if interesting_word.len() > normed_w.len() {
-                let _ = ispell.add_word(&interesting_word);
+            if interesting_word.nfkd().any(is_combining_mark) {
+                let _ = ispell.add_word(&interesting_word); // ignore the error
                 nb_added += 1;
             }
         }
@@ -54,25 +53,21 @@ pub fn populate_dict_from_file(file: &str,
 fn get_interesting_word(map: &HashMap<String, u32>) -> Option<String> {
     let mut map_iter = map.iter();
     let mut first_max_w = map_iter.next().expect("This map should never be empty");
-    // if a normed word only appears written one way, it is qualified
-    if map.len() == 1 {
-        return Some(first_max_w.0.clone());
-    }
-    let mut second_max_w = map_iter.next().unwrap();
-    if second_max_w.1 > first_max_w.1 {
-        mem::swap(&mut second_max_w, &mut first_max_w);
-    }
+    let mut second_max_count = 0;
+
     for i in map_iter {
         if i.1 > first_max_w.1 {
-            mem::swap(&mut second_max_w, &mut first_max_w);
+            second_max_count = *first_max_w.1;
             first_max_w = i;
-        } else if i.1 > second_max_w.1 {
-            second_max_w = i;
+        } else if *i.1 > second_max_count {
+            second_max_count = *i.1;
         }
     }
-    // first and second max contain the 2 forms appearing more and their occurences
+
+    // first max contains the forms appearing more and its occurences
+    // second max reports the occurences of the second form appearing more
     // if the first form appears 4 times (empirical) more than the second one, it is qualified
-    if (first_max_w.1 / second_max_w.1) >= 4 {
+    if second_max_count == 0 || (*first_max_w.1 / second_max_count) >= 4 {
         return Some(first_max_w.0.clone());
     }
     None
