@@ -6,7 +6,7 @@ fn must_be_lower(text: &str) -> bool {
     lazy_static! {
         static ref RE: RegexSet =
             RegexSet::new(&[
-                r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|au|aux|un|une)$",
+                r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|lès|au|aux|un|une)$",
                 r"(?i)^(à|\d+([eè]me|[eè]re?|nde?))$",
                 ]).unwrap();
     }
@@ -41,7 +41,7 @@ pub fn fixed_case_word(name: &str) -> String {
 }
 
 
-pub fn sed_whole_name(name: &str) -> String {
+pub fn sed_whole_name_before(name: &str) -> String {
     lazy_static! {
         static ref RE_SAINT: Regex =
             Regex::new(r"(?i)(^|\W)s(?:ain)?t(e?)\W+").unwrap();
@@ -49,10 +49,10 @@ pub fn sed_whole_name(name: &str) -> String {
     let res = RE_SAINT.replace_all(name, "${1}Saint${2}-");
 
     lazy_static! {
-        static ref RE_ND: Regex =
-            Regex::new(r"(?i)(^|\W)n(?:otre)?[ -]*d(?:ame)?(\W|$)").unwrap();
+        static ref RE_AVENUE: Regex =
+            Regex::new(r"(?i)(^|\W)ave?\.?(\W|$)").unwrap();
     }
-    let res = RE_ND.replace_all(&res, "${1}Notre-Dame${2}");
+    let res = RE_AVENUE.replace_all(&res, "${1}Avenue${2}");
 
     lazy_static! {
         static ref RE_PLACE: Regex =
@@ -67,22 +67,39 @@ pub fn sed_whole_name(name: &str) -> String {
     let res = RE_BOULEVARD.replace_all(&res, "${1}Boulevard${2}");
 
     lazy_static! {
-        static ref RE_AVENUE: Regex =
-            Regex::new(r"(?i)(^|\W)ave?\.?(\W|$)").unwrap();
-    }
-    let res = RE_AVENUE.replace_all(&res, "${1}Avenue${2}");
-
-    lazy_static! {
         static ref RE_ROUTE: Regex =
             Regex::new(r"(?i)(^|\W)rte(\W|$)").unwrap();
     }
     let res = RE_ROUTE.replace_all(&res, "${1}Route${2}");
 
     lazy_static! {
+        static ref RE_ND: Regex =
+            Regex::new(r"(?i)(^|\W)n(?:otre)?[ -]*d(?:ame)?(\W|$)").unwrap();
+    }
+    let res = RE_ND.replace_all(&res, "${1}Notre-Dame${2}");
+
+    lazy_static! {
+        static ref RE_HOTEL_DE_VILLE: Regex =
+            Regex::new(r"(?i)(^|\W)hdv(\W|$)").unwrap();
+    }
+    let res = RE_HOTEL_DE_VILLE.replace_all(&res, "${1}Hôtel de Ville${2}");
+
+    lazy_static! {
+        static ref RE_ROND_POINT: Regex =
+            Regex::new(r"(?i)(^|\W)ro?n?d[ \.-]?po?i?n?t(\W|$)").unwrap();
+    }
+    let res = RE_ROND_POINT.replace_all(&res, "${1}Rond-Point ");
+
+    res.into_owned()
+}
+
+
+pub fn sed_whole_name_after(name: &str) -> String {
+    lazy_static! {
         static ref RE_DU_NUM: Regex =
             Regex::new(r"(?i)(^|\W)(du|de la) (\d+)e(\W|$)").unwrap();
     }
-    let res = RE_DU_NUM.replace_all(&res, "${1}${2} ${3}ème${4}");
+    let res = RE_DU_NUM.replace_all(name, "${1}${2} ${3}ème${4}");
     lazy_static! {
         static ref RE_DU_PREMIER: Regex =
             Regex::new(r"(?i)(^|\W)du 1ème(\W|$)").unwrap();
@@ -95,12 +112,6 @@ pub fn sed_whole_name(name: &str) -> String {
     let res = RE_DE_LA_PREMIERE.replace_all(&res, "${1}de la 1ère${2}");
 
     lazy_static! {
-        static ref RE_HOTEL_DE_VILLE: Regex =
-            Regex::new(r"(?i)(^|\W)hdv(\W|$)").unwrap();
-    }
-    let res = RE_HOTEL_DE_VILLE.replace_all(&res, "${1}Hôtel de Ville${2}");
-
-    lazy_static! {
         static ref RE_A: Regex =
             Regex::new(r"(?i) a ").unwrap();
     }
@@ -111,12 +122,6 @@ pub fn sed_whole_name(name: &str) -> String {
             Regex::new(r"(?i)’").unwrap();
     }
     let res = RE_BACKQUOTE.replace_all(&res, "'");
-
-    lazy_static! {
-        static ref RE_ROND_POINT: Regex =
-            Regex::new(r"(?i)(^|\W)ro?n?d[ \.-]?po?i?n?t(\W|$)").unwrap();
-    }
-    let res = RE_ROND_POINT.replace_all(&res, "${1}Rond-Point ");
 
     lazy_static! {
         static ref RE_SPACES: Regex =
@@ -144,7 +149,8 @@ pub fn sed_whole_name(name: &str) -> String {
 
     lazy_static! {
         static ref RE_QUOTE_H: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])[ ']+(h[aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+            Regex::new(r"(?i)(^|\W)([ld])[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)")
+            .unwrap();
     }
     let res = RE_QUOTE_H.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
@@ -152,7 +158,7 @@ pub fn sed_whole_name(name: &str) -> String {
 
     lazy_static! {
         static ref RE_QUOTE_DE: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])e[ ']+([aiouye]|[aiouy]|et[^ ]|e[^t].)").unwrap();
+            Regex::new(r"(?i)(^|\W)([ld])e[ ']+([aiîouyéèê]|et[^ ]|e[^t].)").unwrap();
     }
     let res = RE_QUOTE_DE.replace_all(&res, |caps: &Captures| {
         format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
