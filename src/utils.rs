@@ -1,6 +1,8 @@
 use encoding::Encoding;
 use encoding::all::{ISO_8859_15, WINDOWS_1252};
 use encoding::EncoderTrap;
+use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::is_combining_mark;
 
 pub fn decode(name: &str) -> String {
     let new_name = name.to_string();
@@ -63,4 +65,16 @@ pub fn snake_case(name: &str) -> String {
         new_name.push_str(&first_upper_all_lower(word));
     }
     new_name
+}
+
+// normalize a word (remove accents, lowercase, ...)
+pub fn normed(word: &str) -> String {
+    word.nfkd()
+        .filter(|c| !is_combining_mark(*c))
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+pub fn has_accent(word: &str) -> bool {
+    word.nfkd().any(is_combining_mark)
 }

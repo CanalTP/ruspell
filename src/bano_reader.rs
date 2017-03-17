@@ -1,9 +1,8 @@
-use unicode_normalization::UnicodeNormalization;
-use unicode_normalization::char::is_combining_mark;
 use std::collections::HashMap;
 use std::iter::FilterMap;
 use std::io;
 use csv;
+use utils;
 use errors::{Result, ResultExt};
 
 pub fn populate_dict_from_file(file: &str,
@@ -27,11 +26,7 @@ pub fn populate_dict_from_file(file: &str,
             if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
                 continue;
             }
-            let normed_w: String = w.nfkd()
-                .filter(|c| !is_combining_mark(*c))
-                .flat_map(char::to_lowercase)
-                .collect();
-            let map = map_normed.entry(normed_w).or_insert_with(HashMap::new);
+            let map = map_normed.entry(utils::normed(w)).or_insert_with(HashMap::new);
             *map.entry(w.to_string()).or_insert(0) += 1;
         }
     }
@@ -39,8 +34,7 @@ pub fn populate_dict_from_file(file: &str,
     let mut nb_added = 0;
     for map in map_normed.values() {
         if let Some(interesting_word) = get_interesting_word(map) {
-            // adding word only if it has accent
-            if interesting_word.nfkd().any(is_combining_mark) {
+            if utils::has_accent(&interesting_word) {
                 let _ = ispell.add_word(&interesting_word); // ignore the error
                 nb_added += 1;
             }

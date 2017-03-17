@@ -1,7 +1,6 @@
-use unicode_normalization::UnicodeNormalization;
-use unicode_normalization::char::is_combining_mark;
 use ispell;
 use errors::{Result, ResultExt};
+use utils;
 
 pub struct SpellCheck {
     aspell: ispell::SpellChecker,
@@ -35,23 +34,14 @@ impl SpellCheck {
 
         let errors_res = self.aspell.check(name);
         let mut new_name = name.to_string();
-        if let Err(e) = errors_res {
-            print!("{:?}", e);
-            println!(" ({})", name);
-            self.nb_error += 1;
-            return Ok(new_name);
-        }
 
         let misspelt_errors = errors_res.chain_err(|| "Could not perform check using aspell")?;
 
         for e in misspelt_errors {
-            let mut valid_suggestions = vec![];
-
-            for s in e.suggestions {
-                if is_suggestion_qualified(&e.misspelled, &s) {
-                    valid_suggestions.push(s);
-                }
-            }
+            let valid_suggestions: Vec<_> = e.suggestions
+                .iter()
+                .filter(|s| is_suggestion_qualified(&e.misspelled, s))
+                .collect();
             if valid_suggestions.len() == 1 {
                 self.nb_replace += 1;
                 new_name = new_name.replace(&e.misspelled, &valid_suggestions[0]);
@@ -66,17 +56,6 @@ impl SpellCheck {
 }
 
 fn is_suggestion_qualified(original: &str, suggestion: &str) -> bool {
-    let normed_orig: String = original.nfkd()
-        .filter(|c| !is_combining_mark(*c))
-        .flat_map(char::to_lowercase)
-        .collect();
-    let normed_sugg: String = suggestion.nfkd()
-        .filter(|c| !is_combining_mark(*c))
-        .flat_map(char::to_lowercase)
-        .collect();
-    // valid IF original word has no accent AND
-    //   normalized versions are the same AND
-    //   suggestion adds accent
-    !original.nfkd().any(is_combining_mark) && normed_orig == normed_sugg &&
-    suggestion.nfkd().any(is_combining_mark)
+    !utils::has_accent(original) && utils::normed(original) == utils::normed(suggestion) &&
+    utils::has_accent(suggestion)
 }
