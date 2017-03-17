@@ -3,15 +3,16 @@ use std::iter::FilterMap;
 use std::io;
 use csv;
 use utils;
+use ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
 
-pub fn populate_dict_from_file(file: &str,
-                               ispell: &mut ::ispell_wrapper::SpellCheck)
-                               -> Result<()> {
+pub fn populate_dict_from_file(file: &str, ispell: &mut SpellCheck) -> Result<()> {
     println!("Reading street and city names from {}", file);
 
-    let mut rdr =
-        csv::Reader::from_file(file).chain_err(|| "Could not open BANO file")?.double_quote(true);
+    let mut rdr = csv::Reader::from_file(file)
+        .chain_err(|| "Could not open BANO file")?
+        .double_quote(true)
+        .has_headers(false);
     let banos = new_bano_iter(&mut rdr);
 
     // This map is built as follows :
@@ -31,10 +32,14 @@ pub fn populate_dict_from_file(file: &str,
         }
     }
 
+    let corpus_size: u32 = map_normed.values().flat_map(|m| m.values()).sum();
+    println!("BANO corpus size = {}", corpus_size);
     let mut nb_added = 0;
     for map in map_normed.values() {
         if let Some(interesting_word) = get_interesting_word(map) {
-            if utils::has_accent(&interesting_word) {
+            if (map[&interesting_word] >= corpus_size / 100000 ||
+                !ispell.has_competitor_word(&interesting_word)?) &&
+               !ispell.has_same_accent_word(&interesting_word)? {
                 let _ = ispell.add_word(&interesting_word); // ignore the error
                 nb_added += 1;
             }

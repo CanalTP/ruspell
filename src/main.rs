@@ -72,10 +72,11 @@ fn process_record(rec: &Record, ispell: &mut SpellCheck) -> Result<Option<Record
     use regex_wrapper;
 
     let mut new_name = utils::decode(&rec.name.clone());
+    new_name = regex_wrapper::sed_whole_name_before(&new_name);
+    new_name = ispell.check(&new_name)?;
     new_name = utils::snake_case(&new_name);
     new_name = regex_wrapper::fixed_case_word(&new_name);
-    new_name = regex_wrapper::sed_whole_name(&new_name);
-    new_name = ispell.check(&new_name)?;
+    new_name = regex_wrapper::sed_whole_name_after(&new_name);
     new_name = utils::first_upper(&new_name);
 
     regex_wrapper::log_suspicious(&new_name);
