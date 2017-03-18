@@ -4,5 +4,6 @@ error_chain! {
         Io(::std::io::Error);
         Ispell(::ispell::Error);
         Csv(::csv::Error);
+        Regex(::regex::Error);
     }
 }

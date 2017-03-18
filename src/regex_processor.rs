@@ -1,13 +1,41 @@
+use std::collections::HashMap;
 use regex::{Regex, RegexSet, Captures};
 use utils;
+use errors::Result;
 
+pub struct RegexProcessor {
+    fixed_case_word: HashMap<String, String>,
+}
+impl RegexProcessor {
+    pub fn new() -> Self {
+        RegexProcessor { fixed_case_word: HashMap::new() }
+    }
+    pub fn add_fixed_case(&mut self, fixed: &str) -> Result<()> {
+        let fixed_lower = fixed.to_lowercase();
+        if self.fixed_case_word.contains_key(&fixed_lower) {
+            return Err(format!("Cannot add multiple fixed case words with \
+                                same lowercase value : \"{}\" and \"{}\"",
+                               self.fixed_case_word[&fixed_lower],
+                               fixed)
+                               .into());
+        }
+        self.fixed_case_word.insert(fixed_lower, fixed.to_string());
+        Ok(())
+    }
+    pub fn fix_case(&self, lower_processed: &str, processed: &str) -> String {
+        if let Some(fixed) = self.fixed_case_word.get(lower_processed) {
+            fixed.clone()
+        } else {
+            processed.to_string()
+        }
+    }
+}
 
 fn must_be_lower(text: &str) -> bool {
     lazy_static! {
         static ref RE: RegexSet =
             RegexSet::new(&[
-                r"(?i)^(en|sur|et|sous|de|du|des|le|la|les|lès|au|aux|un|une)$",
-                r"(?i)^(à|\d+([eè]me|[eè]re?|nde?))$",
+                r"(?i)^(\d+([eè]me|[eè]re?|nde?))$",
                 ]).unwrap();
     }
     RE.is_match(text)
@@ -17,24 +45,22 @@ fn must_be_upper(text: &str) -> bool {
     lazy_static! {
         static ref RE: RegexSet =
             RegexSet::new(&[
-                r"(?i)^(RER|CDG|CES|ASPTT|PTT|EDF|GDF|INRIA|INRA|CRC|HEC|SNCF|RATP|HLM|CHR|CHU)$",
-                r"(?i)^(KFC|MJC|IME|CAT|DDE|LEP|EGB|SNECMA|DGAT|VVF)$",
-                r"(?i)^(ZA|ZAC|ZI|RPA|CFA|CEA|CC|IUT|TGV|CCI|UFR|CPAM|ANPE|\w*\d\w*|RN\d*|RD\d*)$",
-                r"(?i)^(XL|X{0,3})(IX|IV|V?I{0,3})$",
+                r"(?i)^((XL|X{0,3})(IX|IV|V?I{0,3})|\w*\d\w*|RN\d*|RD\d*)$",
                 ]).unwrap();
     }
     RE.is_match(text)
 }
 
-pub fn fixed_case_word(name: &str) -> String {
+pub fn fixed_case_word(name: &str, regex: &RegexProcessor) -> String {
     let mut new_name = String::new();
     for word in utils::get_words(name) {
+        let lower_word = word.to_lowercase();
         if must_be_lower(word) {
             new_name.push_str(&word.to_lowercase());
         } else if must_be_upper(word) {
             new_name.push_str(&word.to_uppercase());
         } else {
-            new_name.push_str(word);
+            new_name.push_str(&regex.fix_case(&lower_word, word));
         }
     }
     new_name
