@@ -134,10 +134,6 @@ fn run() -> Result<()> {
             .map_or(Ok(()), |w| w.encode(&rec.raw))
             .chain_err(|| "Could not write into output file")?;
     }
-
-    println!("Ispell replaced {} words and produced {} error",
-             ispell.nb_replace(),
-             ispell.nb_error());
     Ok(())
 }
 
