@@ -22,11 +22,11 @@ impl RegexProcessor {
         self.fixed_case_word.insert(fixed_lower, fixed.to_string());
         Ok(())
     }
-    pub fn fix_case(&self, lower_processed: &str, processed: &str) -> String {
+    pub fn fix_case(&self, lower_processed: &str, processed: &str, push_on: &mut String) -> () {
         if let Some(fixed) = self.fixed_case_word.get(lower_processed) {
-            fixed.clone()
+            push_on.push_str(fixed);
         } else {
-            processed.to_string()
+            push_on.push_str(processed);
         }
     }
 }
@@ -60,7 +60,7 @@ pub fn fixed_case_word(name: &str, regex: &RegexProcessor) -> String {
         } else if must_be_upper(word) {
             new_name.push_str(&word.to_uppercase());
         } else {
-            new_name.push_str(&regex.fix_case(&lower_word, word));
+            regex.fix_case(&lower_word, word, &mut new_name);
         }
     }
     new_name
