@@ -27,6 +27,7 @@ use ispell_wrapper::SpellCheck;
 use records_reader::Record;
 use regex_processor::RegexProcessor;
 use std::io;
+use std::fs::File;
 use errors::{Result, ResultExt};
 
 
@@ -37,10 +38,9 @@ struct Args {
                         (typically a GTFS stops.txt file).")]
     input: String,
 
-    #[structopt(long = "bano", short = "b",
-                help = "Path to input BANO file to be read \
-                        (street and city names for dictionnary).")]
-    bano: Option<String>,
+    #[structopt(long = "param", short = "p",
+                help = "Path to param file to be read.")]
+    param: String,
 
     #[structopt(long = "output", short = "o",
                 help = "Path to output CSV file after processing \
@@ -61,26 +61,43 @@ struct Args {
     heading_name: String,
 }
 
+// define params file structure
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct ProcessSequence {
-    actions: Vec<Action>,
+    processes: Vec<NameProcessor>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum Action {
-    FixedCaseWord(FixedCaseWord),
+enum NameProcessor {
+    Decode(Decode),
+    FirstLetterUppercase,
+    SnakeCase,
+    LowercaseWord(FixedcaseWord),
+    UppercaseWord(FixedcaseWord),
+    RegexReplace(RegexReplace),
+    IspellCheck(IspellCheck),
+    LogSuspicious,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FixedCaseWord {
+struct Decode {
+    from_encoding: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct FixedcaseWord {
     words: Vec<String>,
 }
 
-#[derive(Debug, RustcEncodable)]
-struct RecordRule {
-    id: String,
-    old_name: String,
-    new_name: String,
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct RegexReplace {
+    from: String,
+    to: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct IspellCheck {
+    bano_files: Vec<String>,
 }
 
 
@@ -90,7 +107,7 @@ fn process_record(rec: &Record,
                   regex: &RegexProcessor)
                   -> Result<Option<RecordRule>> {
 
-    let mut new_name = utils::decode(&rec.name.clone());
+    let mut new_name = utils::decode(&rec.name);
     new_name = regex_processor::sed_whole_name_before(&new_name);
     new_name = ispell.check(&new_name)?;
     new_name = utils::snake_case(&new_name);
@@ -109,6 +126,14 @@ fn process_record(rec: &Record,
                     new_name: new_name,
                 }))
     }
+}
+
+
+#[derive(Debug, RustcEncodable)]
+struct RecordRule {
+    id: String,
+    old_name: String,
+    new_name: String,
 }
 
 
@@ -140,80 +165,32 @@ fn run() -> Result<()> {
 
     //creating regex wrapper from params
     let mut regex = RegexProcessor::new();
-    let fcw = FixedCaseWord {
-        words: vec!["en".to_string(),
-                    "sur".to_string(),
-                    "et".to_string(),
-                    "sous".to_string(),
-                    "de".to_string(),
-                    "du".to_string(),
-                    "des".to_string(),
-                    "la".to_string(),
-                    "les".to_string(),
-                    "lès".to_string(),
-                    "au".to_string(),
-                    "aux".to_string(),
-                    "un".to_string(),
-                    "une".to_string(),
-                    "à".to_string(),
-                    "le".to_string(),
-                    "RER".to_string(),
-                    "CDG".to_string(),
-                    "CES".to_string(),
-                    "ASPTT".to_string(),
-                    "PTT".to_string(),
-                    "EDF".to_string(),
-                    "GDF".to_string(),
-                    "INRIA".to_string(),
-                    "INRA".to_string(),
-                    "CRC".to_string(),
-                    "HEC".to_string(),
-                    "SNCF".to_string(),
-                    "RATP".to_string(),
-                    "HLM".to_string(),
-                    "CHR".to_string(),
-                    "CHU".to_string(),
-                    "KFC".to_string(),
-                    "MJC".to_string(),
-                    "IME".to_string(),
-                    "CAT".to_string(),
-                    "DDE".to_string(),
-                    "LEP".to_string(),
-                    "EGB".to_string(),
-                    "SNECMA".to_string(),
-                    "DGAT".to_string(),
-                    "VVF".to_string(),
-                    "ZA".to_string(),
-                    "ZAC".to_string(),
-                    "ZI".to_string(),
-                    "RPA".to_string(),
-                    "CFA".to_string(),
-                    "CEA".to_string(),
-                    "CC".to_string(),
-                    "IUT".to_string(),
-                    "TGV".to_string(),
-                    "CCI".to_string(),
-                    "UFR".to_string(),
-                    "CPAM".to_string(),
-                    "ANPE".to_string()],
-    };
-    let process = ProcessSequence { actions: vec![Action::FixedCaseWord(fcw)] };
-    let s = serde_yaml::to_string(&process).unwrap();
-    println!("{}", s);
-    for a in process.actions {
+    let param_rdr = File::open(args.param).chain_err(|| "Could not open param file")?;
+    let sequence: ProcessSequence = serde_yaml::from_reader(param_rdr).chain_err(|| "Problem while reading param file")?;
+    let mut bano_file = None;
+    for a in sequence.processes {
         match a {
-            Action::FixedCaseWord(fcw) => {
+            NameProcessor::LowercaseWord(fcw) => {
                 for w in fcw.words {
                     regex.add_fixed_case(&w)?;
                 }
             }
+            NameProcessor::UppercaseWord(fcw) => {
+                for w in fcw.words {
+                    regex.add_fixed_case(&w)?;
+                }
+            }
+            NameProcessor::IspellCheck(ispell) => {
+                bano_file = Some(ispell.bano_files[0].clone());
+            }
+            _ => (),
         }
     }
 
     // creating ispell manager (and populate dictionnary if requested)
     let mut ispell = SpellCheck::new().chain_err(|| "Could not create ispell manager")?;
-    if let Some(bano_file) = args.bano {
-        bano_reader::populate_dict_from_file(&bano_file, &mut ispell)?;
+    if bano_file.is_some() {
+        bano_reader::populate_dict_from_file(&bano_file.unwrap(), &mut ispell)?;
     }
 
     for mut rec in records {

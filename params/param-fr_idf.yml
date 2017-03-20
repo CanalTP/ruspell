@@ -1,0 +1,162 @@
+---
+processes: 
+    # manage double encoding from latin1 and latin9
+  - Decode: 
+      from_encoding: ISO_8859_15
+  - Decode: 
+      from_encoding: WINDOWS_1252
+
+    # expend "Saint(e)" and add final "-"
+    # NOTA: must be done before spell-check
+  - RegexReplace: 
+      from: "(^|\\W)s(?:ain)?t(e?)\\W+"
+      to: "${1}Saint${2}-"
+  - RegexReplace: 
+      from: "(^|\\W)ave?\\.?(\\W|$)"
+      to: "${1}Avenue${2}"
+  - RegexReplace: 
+      from: "(^|\\W)pl\\.?(\\W|$)"
+      to: "${1}Place${2}"
+  - RegexReplace: 
+      from: "(^|\\W)bl?v?d\\.?(\\W|$)"
+      to: "${1}Boulevard${2}"
+  - RegexReplace: 
+      from: "(^|\\W)rte\\.?(\\W|$)"
+      to: "${1}Route${2}"
+  - RegexReplace: 
+      from: "(^|\\W)n(?:otre)?[ -]*d(?:ame)?(\\W|$)"
+      to: "${1}Notre-Dame${2}"
+  - RegexReplace: 
+      from: "(^|\\W)hdv\\.?(\\W|$)"
+      to: "${1}Hôtel de Ville${2}"
+  - RegexReplace: 
+      from: "(^|\\W)ro?n?d[ \\.-]?po?i?n?t(\\W|$)"
+      to: "${1}Rond-Point "
+  - RegexReplace: # manage back-quote (different from simple quote but shouldn't be)
+      from: "’"
+      to: "'"
+  - RegexReplace: 
+      from: "(^|\\W)de le(\\W|$)"
+      to: "${1}du${2}"
+  - RegexReplace: 
+      from: "(^|\\W)de les(\\W|$)"
+      to: "${1}des${2}"
+  - RegexReplace: 
+      from: " a "
+      to: " à "
+  - RegexReplace: # manage multiple spaces or _
+      from: "[_ ]+"
+      to: " "
+  - RegexReplace:
+      from: "(^|[^ ])(?: -|- )([^ ]|$)"
+      to: "${1} - ${2}"
+  - RegexReplace: 
+      from: "(^|\\W)gal(\\W|$)"
+      to: "${1}Général${2}"
+  - RegexReplace: 
+      from: "(^|\\W)mal(\\W|$)"
+      to: "${1}Maréchal${2}"
+    # manage "du 15e"
+    # NOTA: the order of the 3 regex below matters
+  - RegexReplace: 
+      from: "(^|\\W)(du|de la) (\\d+)e(\\W|$)"
+      to: "${1}${2} ${3}ème${4}"
+  - RegexReplace: 
+      from: "(^|\\W)du 1ème(\\W|$)"
+      to: "${1}du 1er${2}"
+  - RegexReplace: 
+      from: "(^|\\W)de la 1ème(\\W|$)"
+      to: "${1}de la 1ère${2}"
+
+    # ispell can change case
+  - IspellCheck: 
+      bano_files: 
+        - "./bano-idf.csv"
+
+  - SnakeCase
+
+    # regex below for "l'" and "d''" also manage lower case, have to be done after snake-case
+  - RegexReplace: 
+      from: "(^|\\W)l[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)"
+      to: "${1}l'${2}"
+  - RegexReplace: 
+      from: "(^|\\W)d[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)"
+      to: "${1}d'${2}"
+  - RegexReplace: 
+      from: "(^|\\W)le[ ']+([aiîouyéèê]|et[^ ]|e[^t].)"
+      to: "${1}l'${2}"
+  - RegexReplace: 
+      from: "(^|\\W)de[ ']+([aiîouyéèê]|et[^ ]|e[^t].)"
+      to: "${1}d'${2}"
+        
+  - UppercaseWord: 
+      words: 
+        - RER
+        - CDG
+        - CES
+        - ASPTT
+        - PTT
+        - EDF
+        - GDF
+        - VSG
+        - INRIA
+        - INRA
+        - CRC
+        - HEC
+        - SNCF
+        - RATP
+        - HLM
+        - CHR
+        - CHU
+        - KFC
+        - MJC
+        - IME
+        - CAT
+        - DDE
+        - LEP
+        - EGB
+        - SNECMA
+        - DGAT
+        - VVF
+        - ZA
+        - ZAC
+        - ZAE
+        - ZI
+        - RPA
+        - CFA
+        - CEA
+        - CC
+        - IUT
+        - TGV
+        - CCI
+        - UFR
+        - CPAM
+        - RN
+        - RD
+        - ANPE
+        - "\\w*\\d\\w*" # words containing a digit
+        - "(XL|X{0,3})(IX|IV|V?I{0,3})" # roman numbers from 1 to 49
+
+  - LowercaseWord: 
+      words: 
+        - en
+        - sur
+        - et
+        - sous
+        - de
+        - du
+        - des
+        - le
+        - la
+        - les
+        - lès
+        - au
+        - aux
+        - un
+        - une
+        - à
+        - "\\d+([eè]me|[eè]re?|nde?)" # manage "2ème" has to be after uppercase management
+
+  - FirstLetterUppercase # to be done after lowercase management
+
+  - LogSuspicious
