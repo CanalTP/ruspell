@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use regex::{Regex, RegexSet, Captures};
+use regex::{Regex, RegexSet};
 use utils;
 use errors::Result;
 
@@ -174,21 +174,28 @@ pub fn sed_whole_name_after(name: &str) -> String {
     let res = RE_MARECHAL.replace_all(&res, "${1}Maréchal${2}");
 
     lazy_static! {
-        static ref RE_QUOTE_H: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)")
+        static ref RE_L_QUOTE_H: Regex =
+            Regex::new(r"(?i)(^|\W)l[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)")
             .unwrap();
     }
-    let res = RE_QUOTE_H.replace_all(&res, |caps: &Captures| {
-        format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
-    });
+    let res = RE_L_QUOTE_H.replace_all(&res, "${1}l'${2}");
+    lazy_static! {
+        static ref RE_D_QUOTE_H: Regex =
+            Regex::new(r"(?i)(^|\W)d[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)")
+            .unwrap();
+    }
+    let res = RE_D_QUOTE_H.replace_all(&res, "${1}d'${2}");
 
     lazy_static! {
-        static ref RE_QUOTE_DE: Regex =
-            Regex::new(r"(?i)(^|\W)([ld])e[ ']+([aiîouyéèê]|et[^ ]|e[^t].)").unwrap();
+        static ref RE_QUOTE_LE: Regex =
+            Regex::new(r"(?i)(^|\W)le[ ']+([aiîouyéèê]|et[^ ]|e[^t].)").unwrap();
     }
-    let res = RE_QUOTE_DE.replace_all(&res, |caps: &Captures| {
-        format!("{}{}'{}", &caps[1], &caps[2].to_lowercase(), &caps[3])
-    });
+    let res = RE_QUOTE_LE.replace_all(&res, "${1}l'${2}");
+    lazy_static! {
+        static ref RE_QUOTE_DE: Regex =
+            Regex::new(r"(?i)(^|\W)de[ ']+([aiîouyéèê]|et[^ ]|e[^t].)").unwrap();
+    }
+    let res = RE_QUOTE_DE.replace_all(&res, "${1}d'${2}");
 
     lazy_static! {
         static ref RE_DE_LE: Regex =
