@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use regex::{Regex, RegexSet};
+use regex::{Regex, RegexBuilder, RegexSet};
 use utils;
 use errors::Result;
 
@@ -49,6 +49,39 @@ fn must_be_upper(text: &str) -> bool {
                 ]).unwrap();
     }
     RE.is_match(text)
+}
+
+struct FixedcaseProcessor {
+    regex: Regex,
+    must_be_lower: bool,
+}
+impl FixedcaseProcessor {
+    pub fn new(words: &Vec<String>, must_be_lower: bool) -> Self {
+        let mut regex_str = "^(".to_string();
+        for w in words {
+            regex_str.push_str(&format!("{}|", w));
+        }
+        regex_str.pop();
+        FixedcaseProcessor {
+            regex: RegexBuilder::new(&regex_str).case_insensitive(true).build().unwrap(),
+            must_be_lower: must_be_lower,
+        }
+    }
+    pub fn process(&self, name: &str) -> String {
+        let mut new_name = String::new();
+        for word in utils::get_words(name) {
+            if self.regex.is_match(word) {
+                if self.must_be_lower {
+                    new_name.push_str(&word.to_lowercase());
+                } else {
+                    new_name.push_str(&word.to_uppercase());
+                }
+            } else {
+                new_name.push_str(word);
+            }
+        }
+        new_name
+    }
 }
 
 pub fn fixed_case_word(name: &str, regex: &RegexProcessor) -> String {
