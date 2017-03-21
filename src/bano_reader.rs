@@ -6,29 +6,31 @@ use utils;
 use ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
 
-pub fn populate_dict_from_file(file: &str, ispell: &mut SpellCheck) -> Result<()> {
-    println!("Reading street and city names from {}", file);
-
-    let mut rdr = csv::Reader::from_file(file)
-        .chain_err(|| "Could not open BANO file")?
-        .double_quote(true)
-        .has_headers(false);
-    let banos = new_bano_iter(&mut rdr);
-
-    // This map is built as follows :
-    // map_normed["napoleon"] = map_napo
-    // map_napo["Napoléon"] = 42 (occurences)
-    // map_napo["Napoleon"] = 2 (occurences)
+pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Result<()> {
     let mut map_normed = HashMap::new();
+    for f in files {
+        println!("Reading street and city names from {}", f);
 
-    for b in banos {
-        for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
-            // do not consider full-uppercase word or word containing a digit
-            if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
-                continue;
+        let mut rdr = csv::Reader::from_file(f)
+            .chain_err(|| "Could not open BANO file")?
+            .double_quote(true)
+            .has_headers(false);
+        let banos = new_bano_iter(&mut rdr);
+
+        // This map is built as follows :
+        // map_normed["napoleon"] = map_napo
+        // map_napo["Napoléon"] = 42 (occurences)
+        // map_napo["Napoleon"] = 2 (occurences)
+
+        for b in banos {
+            for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
+                // do not consider full-uppercase word or word containing a digit
+                if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
+                    continue;
+                }
+                let map = map_normed.entry(utils::normed(w)).or_insert_with(HashMap::new);
+                *map.entry(w.to_string()).or_insert(0) += 1;
             }
-            let map = map_normed.entry(utils::normed(w)).or_insert_with(HashMap::new);
-            *map.entry(w.to_string()).or_insert(0) += 1;
         }
     }
 

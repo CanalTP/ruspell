@@ -1,20 +1,19 @@
-use encoding::Encoding;
-use encoding::all::{ISO_8859_15, WINDOWS_1252};
+use encoding::label::encoding_from_whatwg_label;
 use encoding::EncoderTrap;
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
+use errors::Result;
 
-pub fn decode(name: &str) -> String {
-    let new_name = name.to_string();
-    let latin9 = ISO_8859_15;
-    if let Ok(Ok(res)) = latin9.encode(&new_name, EncoderTrap::Strict).map(String::from_utf8) {
-        return res;
+
+pub fn decode(name: &str, encoding: &str) -> Result<String> {
+    let enc = encoding_from_whatwg_label(encoding);
+    if enc.is_none() {
+        return Err(format!("Could not find encoding from {}", encoding).into());
     }
-    let latin1 = WINDOWS_1252;
-    if let Ok(Ok(res)) = latin1.encode(&new_name, EncoderTrap::Strict).map(String::from_utf8) {
-        return res;
+    if let Ok(Ok(res)) = enc.unwrap().encode(name, EncoderTrap::Strict).map(String::from_utf8) {
+        return Ok(res);
     }
-    new_name
+    Ok(name.to_string())
 }
 
 
