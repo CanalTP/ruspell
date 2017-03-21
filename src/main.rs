@@ -12,8 +12,6 @@ extern crate serde_derive;
 extern crate error_chain;
 #[macro_use]
 extern crate structopt_derive;
-#[macro_use]
-extern crate lazy_static;
 
 mod utils;
 mod regex_processor;
@@ -21,13 +19,12 @@ mod ispell_wrapper;
 mod bano_reader;
 mod records_reader;
 mod errors;
+mod param;
+mod worker;
 
 use structopt::StructOpt;
-use ispell_wrapper::SpellCheck;
 use records_reader::Record;
-use regex_processor::RegexProcessor;
 use std::io;
-use std::fs::File;
 use errors::{Result, ResultExt};
 
 
@@ -61,61 +58,38 @@ struct Args {
     heading_name: String,
 }
 
-// define params file structure
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct ProcessSequence {
-    processes: Vec<NameProcessor>,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum NameProcessor {
-    Decode(Decode),
-    FirstLetterUppercase,
-    SnakeCase,
-    LowercaseWord(FixedcaseWord),
-    UppercaseWord(FixedcaseWord),
-    RegexReplace(RegexReplace),
-    IspellCheck(IspellCheck),
-    LogSuspicious,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Decode {
-    from_encoding: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FixedcaseWord {
-    words: Vec<String>,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct RegexReplace {
-    from: String,
-    to: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct IspellCheck {
-    bano_files: Vec<String>,
-}
-
 
 /// management of all processing applied to names
 fn process_record(rec: &Record,
-                  ispell: &mut SpellCheck,
-                  regex: &RegexProcessor)
+                  processors: &mut Vec<worker::Processor>)
                   -> Result<Option<RecordRule>> {
 
-    let mut new_name = utils::decode(&rec.name);
-    new_name = regex_processor::sed_whole_name_before(&new_name);
-    new_name = ispell.check(&new_name)?;
-    new_name = utils::snake_case(&new_name);
-    new_name = regex_processor::fixed_case_word(&new_name, regex);
-    new_name = regex_processor::sed_whole_name_after(&new_name);
-    new_name = utils::first_upper(&new_name);
-
-    regex_processor::log_suspicious(&new_name);
+    let mut new_name = rec.name.clone();
+    for p in processors {
+        match *p {
+            worker::Processor::Fixedcase(ref p) => {
+                new_name = p.process(&new_name);
+            }
+            worker::Processor::RegexReplace(ref p) => {
+                new_name = p.process(&new_name);
+            }
+            worker::Processor::Ispell(ref mut p) => {
+                new_name = p.process(&new_name)?;
+            }
+            worker::Processor::Decode(ref d) => {
+                new_name = utils::decode(&new_name, &d.from_encoding)?;
+            }
+            worker::Processor::SnakeCase => {
+                new_name = utils::snake_case(&new_name);
+            }
+            worker::Processor::FirstLetterUppercase => {
+                new_name = utils::first_upper(&new_name);
+            }
+            worker::Processor::LogSuspicious(ref l) => {
+                l.process(&new_name);
+            }
+        }
+    }
 
     if rec.name == new_name {
         Ok(None)
@@ -138,8 +112,6 @@ struct RecordRule {
 
 
 fn run() -> Result<()> {
-    use bano_reader;
-
     let args = Args::from_args();
 
     let mut rdr_stops = csv::Reader::from_file(args.input)
@@ -163,38 +135,11 @@ fn run() -> Result<()> {
         .map_or(Ok(()), |w| w.encode(headers))
         .chain_err(|| "Could not write header of output file")?;
 
-    //creating regex wrapper from params
-    let mut regex = RegexProcessor::new();
-    let param_rdr = File::open(args.param).chain_err(|| "Could not open param file")?;
-    let sequence: ProcessSequence = serde_yaml::from_reader(param_rdr).chain_err(|| "Problem while reading param file")?;
-    let mut bano_file = None;
-    for a in sequence.processes {
-        match a {
-            NameProcessor::LowercaseWord(fcw) => {
-                for w in fcw.words {
-                    regex.add_fixed_case(&w)?;
-                }
-            }
-            NameProcessor::UppercaseWord(fcw) => {
-                for w in fcw.words {
-                    regex.add_fixed_case(&w)?;
-                }
-            }
-            NameProcessor::IspellCheck(ispell) => {
-                bano_file = Some(ispell.bano_files[0].clone());
-            }
-            _ => (),
-        }
-    }
-
-    // creating ispell manager (and populate dictionnary if requested)
-    let mut ispell = SpellCheck::new().chain_err(|| "Could not create ispell manager")?;
-    if bano_file.is_some() {
-        bano_reader::populate_dict_from_file(&bano_file.unwrap(), &mut ispell)?;
-    }
+    //creating processor vector from params
+    let mut processors = param::read_param(&args.param).chain_err(|| "Could not read param file")?;
 
     for mut rec in records {
-        if let Some(rule) = process_record(&rec, &mut ispell, &regex)? {
+        if let Some(rule) = process_record(&rec, &mut processors)? {
             rec.raw[name_pos] = rule.new_name.clone();
             wtr_rules.encode(&rule).chain_err(|| "Could not write into rules file")?;
         }

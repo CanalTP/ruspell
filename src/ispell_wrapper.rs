@@ -81,7 +81,7 @@ impl SpellCheck {
         Ok(false)
     }
 
-    pub fn check(&mut self, name: &str) -> Result<String> {
+    pub fn process(&mut self, name: &str) -> Result<String> {
         let misspelt_errors = self.check_cache(name)?;
 
         let mut new_name = name.to_string();
