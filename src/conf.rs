@@ -1,13 +1,9 @@
 use std::fs::File;
-use workers::worker;
-use workers::regex_processor as rp;
+use worker::{self, ispell_wrapper, bano_reader, regex_processor as rp};
 use errors::{Result, ResultExt};
 use serde_yaml;
 
-use workers::ispell_wrapper;
-use workers::bano_reader;
-
-// define params file structure
+// define config file structure
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct ProcessSequence {
     processes: Vec<NameProcessor>,
@@ -51,14 +47,14 @@ struct LogSuspicious {
     regex: String,
 }
 
-pub fn read_param(param_file: &str) -> Result<Vec<worker::Processor>> {
+pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
     use self::NameProcessor::*;
-    use workers::worker::Processor as WP;
+    use worker::Processor as WP;
 
-    let param_rdr = File::open(param_file).chain_err(|| "Could not open param file")?;
+    let conf_rdr = File::open(conf_file).chain_err(|| "Could not open config file")?;
 
     let sequence: ProcessSequence =
-        serde_yaml::from_reader(param_rdr).chain_err(|| "Problem while reading param file")?;
+        serde_yaml::from_reader(conf_rdr).chain_err(|| "Problem while reading config file")?;
 
     sequence.processes
         .into_iter()

@@ -3,7 +3,7 @@ use std::iter::FilterMap;
 use std::io;
 use csv;
 use utils;
-use workers::ispell_wrapper::SpellCheck;
+use super::ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
 
 pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Result<()> {

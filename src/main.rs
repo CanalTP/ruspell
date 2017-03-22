@@ -14,15 +14,10 @@ extern crate error_chain;
 extern crate structopt_derive;
 
 mod utils;
-mod workers {
-    pub mod worker;
-    pub mod bano_reader;
-    pub mod ispell_wrapper;
-    pub mod regex_processor;
-}
+mod worker;
 mod records_reader;
 mod errors;
-mod param;
+mod conf;
 
 
 use structopt::StructOpt;
@@ -38,9 +33,9 @@ struct Args {
                         (typically a GTFS stops.txt file).")]
     input: String,
 
-    #[structopt(long = "param", short = "p",
-                help = "Path to param file to be read.")]
-    param: String,
+    #[structopt(long = "config", short = "c",
+                help = "Path to configuration file to be read.")]
+    config: String,
 
     #[structopt(long = "output", short = "o",
                 help = "Path to output CSV file after processing \
@@ -63,8 +58,10 @@ struct Args {
 
 
 /// management of all processing applied to names
+/// returns None if no change was applied,
+/// Some modified name otherwise
 fn process_record(rec: &Record,
-                  processors: &mut Vec<workers::worker::Processor>)
+                  processors: &mut [worker::Processor])
                   -> Result<Option<RecordRule>> {
 
     let mut new_name = rec.name.clone();
@@ -116,8 +113,8 @@ fn run() -> Result<()> {
         .map_or(Ok(()), |w| w.encode(headers))
         .chain_err(|| "Could not write header of output file")?;
 
-    //creating processor vector from params
-    let mut processors = param::read_param(&args.param).chain_err(|| "Could not read param file")?;
+    //creating processor vector from config
+    let mut processors = conf::read_conf(&args.config).chain_err(|| "Could not read config file")?;
 
     for mut rec in records {
         if let Some(rule) = process_record(&rec, &mut processors)? {

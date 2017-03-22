@@ -1,6 +1,7 @@
 use ispell;
 use errors::{Result, ResultExt};
 use utils;
+use std::collections::BTreeSet;
 
 struct SpellCache {
     name: String,
@@ -88,9 +89,14 @@ impl SpellCheck {
 
         for e in misspelt_errors.iter().filter(|e| !utils::has_accent(&e.misspelled)) {
             let normed_miss = utils::normed(&e.misspelled);
+            // set_lowercase just helps ignoring concurrence between
+            // suggestions differing just by case
+            let mut set_lowercase = BTreeSet::new();
             let valid_suggestions: Vec<_> = e.suggestions
                 .iter()
-                .filter(|s| normed_miss == utils::normed(s))
+                .filter(|s| {
+                    normed_miss == utils::normed(s) && set_lowercase.insert(s.to_lowercase())
+                })
                 .collect();
             if valid_suggestions.len() == 1 && utils::has_accent(valid_suggestions[0]) {
                 new_name = new_name.replace(&e.misspelled, valid_suggestions[0]);
