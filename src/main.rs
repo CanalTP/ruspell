@@ -65,17 +65,23 @@ fn process_record(rec: &Record,
                   -> Result<Option<RecordRule>> {
 
     let mut new_name = rec.name.clone();
-    for p in processors {
-        new_name = p.apply(&new_name)?;
+    let mut modifications = vec![];
+    for (i, p) in processors.iter_mut().enumerate() {
+        let modified_name = p.apply(&new_name)?;
+        if modified_name != new_name {
+            modifications.push((i, modified_name.clone()));
+        }
+        new_name = modified_name;
     }
 
-    if rec.name == new_name {
+    if rec.name == new_name && modifications.is_empty() {
         Ok(None)
     } else {
         Ok(Some(RecordRule {
             id: rec.id.clone(),
             old_name: rec.name.clone(),
             new_name: new_name,
+            debug: format!("{:?}", modifications),
         }))
     }
 }
@@ -86,6 +92,7 @@ struct RecordRule {
     id: String,
     old_name: String,
     new_name: String,
+    debug: String,
 }
 
 
@@ -101,7 +108,7 @@ fn run() -> Result<()> {
     // producing rules to be applied to re-spell names
     let mut wtr_rules =
         csv::Writer::from_file(args.rules).chain_err(|| "Could not open rules file")?;
-    wtr_rules.encode(("id", "old_name", "new_name"))
+    wtr_rules.encode(("id", "old_name", "new_name", "debug"))
         .chain_err(|| "Could not write header of rules file")?;
 
     // producing output and replacing names only if requested (wtr_stops is an Option)
