@@ -1,5 +1,6 @@
 use regex::{Regex, RegexBuilder};
 use utils;
+use std::fmt::Write;
 use errors::{Result, ResultExt};
 
 
@@ -11,7 +12,7 @@ impl FixedcaseProcessor {
     pub fn new(words: &[String], must_be_lower: bool) -> Result<Self> {
         let mut regex_str = "^(".to_string();
         for w in words {
-            regex_str.push_str(&format!("{}|", w));
+            write!(&mut regex_str, "{}|", w)?;
         }
         regex_str.pop();
         regex_str.push_str(")$");

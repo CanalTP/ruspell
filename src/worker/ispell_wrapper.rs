@@ -34,12 +34,8 @@ impl SpellCheck {
         Ok(self.aspell.add_word(new_word)?)
     }
 
-    fn get_ispell_errors(&mut self, word: &str) -> Result<&Vec<ispell::IspellError>> {
-        if self.cache.is_none() ||
-           self.cache
-            .as_ref()
-            .unwrap()
-            .name != word {
+    fn get_ispell_errors(&mut self, word: &str) -> Result<&[ispell::IspellError]> {
+        if self.cache.as_ref().map_or(true, |cache| cache.name != word) {
             self.cache = Some(SpellCache::new(&mut self.aspell, word)?);
         }
         Ok(&self.cache
