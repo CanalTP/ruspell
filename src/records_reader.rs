@@ -28,10 +28,10 @@ impl<'a, R: io::Read + 'a> RecordIter<'a, R> {
         };
 
         Ok(RecordIter {
-               iter: r.records(),
-               id_pos: get_pos(heading_id)?,
-               name_pos: get_pos(heading_name)?,
-           })
+            iter: r.records(),
+            id_pos: get_pos(heading_id)?,
+            name_pos: get_pos(heading_name)?,
+        })
     }
 }
 impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
@@ -49,10 +49,10 @@ impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
                 let id = get(&r, self.id_pos)?.to_string();
                 let name = get(&r, self.name_pos)?.to_string();
                 Ok(Record {
-                       id: id,
-                       name: name,
-                       raw: r,
-                   })
+                    id: id,
+                    name: name,
+                    raw: r,
+                })
             })
         })
     }

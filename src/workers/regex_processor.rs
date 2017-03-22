@@ -16,11 +16,11 @@ impl FixedcaseProcessor {
         regex_str.pop();
         regex_str.push_str(")$");
         Ok(FixedcaseProcessor {
-               regex: RegexBuilder::new(&regex_str).case_insensitive(true)
-                   .build()
-                   .chain_err(|| format!("Problem building the Regex from {}", regex_str))?,
-               must_be_lower: must_be_lower,
-           })
+            regex: RegexBuilder::new(&regex_str).case_insensitive(true)
+                .build()
+                .chain_err(|| format!("Problem building the Regex from {}", regex_str))?,
+            must_be_lower: must_be_lower,
+        })
     }
     pub fn process(&self, name: &str) -> String {
         let mut new_name = String::new();
@@ -47,11 +47,11 @@ pub struct RegexReplace {
 impl RegexReplace {
     pub fn new(from: &str, to: &str) -> Result<Self> {
         Ok(RegexReplace {
-               from: RegexBuilder::new(from).case_insensitive(true)
-                   .build()
-                   .chain_err(|| format!("Problem building the Regex from {}", from))?,
-               to: to.to_string(),
-           })
+            from: RegexBuilder::new(from).case_insensitive(true)
+                .build()
+                .chain_err(|| format!("Problem building the Regex from {}", from))?,
+            to: to.to_string(),
+        })
     }
     pub fn process(&self, name: &str) -> String {
         self.from.replace_all(name, self.to.as_str()).into_owned()
@@ -65,10 +65,10 @@ pub struct LogSuspicious {
 impl LogSuspicious {
     pub fn new(regex: &str) -> Result<Self> {
         Ok(LogSuspicious {
-               regex: RegexBuilder::new(regex).case_insensitive(true)
-                   .build()
-                   .chain_err(|| format!("Problem building the Regex from {}", regex))?,
-           })
+            regex: RegexBuilder::new(regex).case_insensitive(true)
+                .build()
+                .chain_err(|| format!("Problem building the Regex from {}", regex))?,
+        })
     }
     pub fn process(&self, name: &str) {
         for m in self.regex.find_iter(name) {

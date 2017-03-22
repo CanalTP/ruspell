@@ -9,9 +9,9 @@ struct SpellCache {
 impl SpellCache {
     fn new(checker: &mut ispell::SpellChecker, name: &str) -> Result<Self> {
         Ok(SpellCache {
-               name: name.to_string(),
-               errors: checker.check(name).chain_err(|| "Could not perform check using aspell")?,
-           })
+            name: name.to_string(),
+            errors: checker.check(name).chain_err(|| "Could not perform check using aspell")?,
+        })
     }
 }
 
@@ -22,34 +22,34 @@ pub struct SpellCheck {
 impl SpellCheck {
     pub fn new() -> Result<Self> {
         Ok(SpellCheck {
-               aspell: ispell::SpellLauncher::new().aspell()
-                   .dictionary("fr")
-                   .launch()?,
-               cache: None,
-           })
+            aspell: ispell::SpellLauncher::new().aspell()
+                .dictionary("fr")
+                .launch()?,
+            cache: None,
+        })
     }
 
     pub fn add_word(&mut self, new_word: &str) -> Result<()> {
         Ok(self.aspell.add_word(new_word)?)
     }
 
-    fn check_cache(&mut self, word: &str) -> Result<&Vec<ispell::IspellError>> {
+    fn get_ispell_errors(&mut self, word: &str) -> Result<&Vec<ispell::IspellError>> {
         if self.cache.is_none() ||
            self.cache
-               .as_ref()
-               .unwrap()
-               .name != word {
+            .as_ref()
+            .unwrap()
+            .name != word {
             self.cache = Some(SpellCache::new(&mut self.aspell, word)?);
         }
         Ok(&self.cache
-                .as_ref()
-                .unwrap()
-                .errors)
+            .as_ref()
+            .unwrap()
+            .errors)
     }
 
     // check for the presence of the same word, no matter the case
     pub fn has_same_accent_word(&mut self, word: &str) -> Result<bool> {
-        let misspelt_errors = self.check_cache(word)?;
+        let misspelt_errors = self.get_ispell_errors(word)?;
 
         if misspelt_errors.is_empty() {
             return Ok(true);
@@ -66,7 +66,7 @@ impl SpellCheck {
 
     // check for the presence of the same word, no matter accent or case
     pub fn has_competitor_word(&mut self, word: &str) -> Result<bool> {
-        let misspelt_errors = self.check_cache(word)?;
+        let misspelt_errors = self.get_ispell_errors(word)?;
 
         if misspelt_errors.is_empty() {
             return Ok(true);
@@ -82,7 +82,7 @@ impl SpellCheck {
     }
 
     pub fn process(&mut self, name: &str) -> Result<String> {
-        let misspelt_errors = self.check_cache(name)?;
+        let misspelt_errors = self.get_ispell_errors(name)?;
 
         let mut new_name = name.to_string();
 
