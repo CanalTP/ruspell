@@ -3,11 +3,16 @@ use std::iter::FilterMap;
 use std::io;
 use csv;
 use utils;
-use ispell_wrapper::SpellCheck;
+use workers::ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
 
 pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Result<()> {
+    // This map is built as follows :
+    // map_normed["napoleon"] = map_napo
+    // map_napo["Napoléon"] = 42 (occurences)
+    // map_napo["Napoleon"] = 2 (occurences)
     let mut map_normed = HashMap::new();
+
     for f in files {
         println!("Reading street and city names from {}", f);
 
@@ -16,11 +21,6 @@ pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Re
             .double_quote(true)
             .has_headers(false);
         let banos = new_bano_iter(&mut rdr);
-
-        // This map is built as follows :
-        // map_normed["napoleon"] = map_napo
-        // map_napo["Napoléon"] = 42 (occurences)
-        // map_napo["Napoleon"] = 2 (occurences)
 
         for b in banos {
             for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
@@ -88,10 +88,10 @@ struct BanoIter<'a, R: io::Read + 'a> {
 impl<'a, R: io::Read + 'a> BanoIter<'a, R> {
     fn new(r: &'a mut csv::Reader<R>) -> csv::Result<Self> {
         Ok(BanoIter {
-               iter: r.records(),
-               street_pos: 2,
-               city_pos: 4,
-           })
+            iter: r.records(),
+            street_pos: 2,
+            city_pos: 4,
+        })
     }
 }
 impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
@@ -109,9 +109,9 @@ impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
                 let street = get(&r, self.street_pos)?.to_string();
                 let city = get(&r, self.city_pos)?.to_string();
                 Ok(Bano {
-                       street: street,
-                       city: city,
-                   })
+                    street: street,
+                    city: city,
+                })
             })
         })
     }

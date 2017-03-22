@@ -14,13 +14,16 @@ extern crate error_chain;
 extern crate structopt_derive;
 
 mod utils;
-mod regex_processor;
-mod ispell_wrapper;
-mod bano_reader;
+mod workers {
+    pub mod worker;
+    pub mod bano_reader;
+    pub mod ispell_wrapper;
+    pub mod regex_processor;
+}
 mod records_reader;
 mod errors;
 mod param;
-mod worker;
+
 
 use structopt::StructOpt;
 use records_reader::Record;
@@ -61,44 +64,22 @@ struct Args {
 
 /// management of all processing applied to names
 fn process_record(rec: &Record,
-                  processors: &mut Vec<worker::Processor>)
+                  processors: &mut Vec<workers::worker::Processor>)
                   -> Result<Option<RecordRule>> {
 
     let mut new_name = rec.name.clone();
     for p in processors {
-        match *p {
-            worker::Processor::Fixedcase(ref p) => {
-                new_name = p.process(&new_name);
-            }
-            worker::Processor::RegexReplace(ref p) => {
-                new_name = p.process(&new_name);
-            }
-            worker::Processor::Ispell(ref mut p) => {
-                new_name = p.process(&new_name)?;
-            }
-            worker::Processor::Decode(ref d) => {
-                new_name = utils::decode(&new_name, &d.from_encoding)?;
-            }
-            worker::Processor::SnakeCase => {
-                new_name = utils::snake_case(&new_name);
-            }
-            worker::Processor::FirstLetterUppercase => {
-                new_name = utils::first_upper(&new_name);
-            }
-            worker::Processor::LogSuspicious(ref l) => {
-                l.process(&new_name);
-            }
-        }
+        new_name = p.apply(&new_name)?;
     }
 
     if rec.name == new_name {
         Ok(None)
     } else {
         Ok(Some(RecordRule {
-                    id: rec.id.clone(),
-                    old_name: rec.name.clone(),
-                    new_name: new_name,
-                }))
+            id: rec.id.clone(),
+            old_name: rec.name.clone(),
+            new_name: new_name,
+        }))
     }
 }
 

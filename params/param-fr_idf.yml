@@ -33,8 +33,8 @@ processes:
       from: "(^|\\W)hdv\\.?(\\W|$)"
       to: "${1}Hôtel de Ville${2}"
   - RegexReplace:
-      from: "(^|\\W)ro?n?d[ \\.-]?po?i?n?t(\\W|$)"
-      to: "${1}Rond-Point "
+      from: "(^|\\W)ro?n?d[ \\.-]?po?i?n?t.?(\\W|$)"
+      to: "${1}Rond-Point${2}"
   - RegexReplace: # manage back-quote (different from simple quote but shouldn't be)
       from: "’"
       to: "'"
