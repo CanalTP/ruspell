@@ -60,12 +60,12 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
         .into_iter()
         .map(|a| match a {
             LowercaseWord(lcw) => {
-                rp::FixedcaseProcessor::new(&lcw.words, true)
+                rp::FixedcaseProcessor::new(&lcw.words, rp::CaseSpecifier::Lower)
                     .chain_err(|| "Could not create LowercaseWord manager")
                     .map(WP::Fixedcase)
             }
             UppercaseWord(ucw) => {
-                rp::FixedcaseProcessor::new(&ucw.words, false)
+                rp::FixedcaseProcessor::new(&ucw.words, rp::CaseSpecifier::Upper)
                     .chain_err(|| "Could not create UppercaseWord manager")
                     .map(WP::Fixedcase)
             }

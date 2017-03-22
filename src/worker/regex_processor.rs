@@ -3,13 +3,16 @@ use utils;
 use std::fmt::Write;
 use errors::{Result, ResultExt};
 
-
+pub enum CaseSpecifier {
+    Lower,
+    Upper,
+}
 pub struct FixedcaseProcessor {
     regex: Regex,
-    must_be_lower: bool,
+    case: CaseSpecifier,
 }
 impl FixedcaseProcessor {
-    pub fn new(words: &[String], must_be_lower: bool) -> Result<Self> {
+    pub fn new(words: &[String], case: CaseSpecifier) -> Result<Self> {
         let mut regex_str = "^(".to_string();
         for w in words {
             write!(&mut regex_str, "{}|", w)?;
@@ -20,17 +23,20 @@ impl FixedcaseProcessor {
             regex: RegexBuilder::new(&regex_str).case_insensitive(true)
                 .build()
                 .chain_err(|| format!("Problem building the Regex from {}", regex_str))?,
-            must_be_lower: must_be_lower,
+            case: case,
         })
     }
     pub fn process(&self, name: &str) -> String {
         let mut new_name = String::new();
         for word in utils::get_words(name) {
             if self.regex.is_match(word) {
-                if self.must_be_lower {
-                    new_name.push_str(&word.to_lowercase());
-                } else {
-                    new_name.push_str(&word.to_uppercase());
+                match self.case {
+                    CaseSpecifier::Lower => {
+                        new_name.push_str(&word.to_lowercase());
+                    }
+                    CaseSpecifier::Upper => {
+                        new_name.push_str(&word.to_uppercase());
+                    }
                 }
             } else {
                 new_name.push_str(word);
