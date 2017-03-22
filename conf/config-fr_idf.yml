@@ -9,7 +9,7 @@ processes:
   - RegexReplace: # manage multiple spaces or _ (to be done early)
       from: "[_ ]+"
       to: " "
-    # expend "Saint(e)" and add final "-"
+    # expand "Saint(e)" and add final "-"
     # NOTA: must be done before spell-check
   - RegexReplace:
       from: "(^|\\W)s(?:ain)?t(e?)\\W+"
@@ -33,7 +33,7 @@ processes:
       from: "(^|\\W)hdv\\.?(\\W|$)"
       to: "${1}Hôtel de Ville${2}"
   - RegexReplace:
-      from: "(^|\\W)ro?n?d[ \\.-]?po?i?n?t.?(\\W|$)"
+      from: "(^|\\W)ro?n?d[ \\.-]?po?i?n?t\\.?(\\W|$)"
       to: "${1}Rond-Point${2}"
   - RegexReplace: # manage back-quote (different from simple quote but shouldn't be)
       from: "’"
@@ -76,12 +76,14 @@ processes:
   - SnakeCase
 
     # regex below for "l'" and "d''" also manage lower case (have to be done after snake-case)
+    # manage lowercase, add quote if missing, avoid treating "D et" to "d'et"
   - RegexReplace:
       from: "(^|\\W)l[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)"
       to: "${1}l'${2}"
   - RegexReplace:
       from: "(^|\\W)d[ ']+(h[aiîouyeéèê]|[aiîouyéèê]|et[^ ]|e[^t].)"
       to: "${1}d'${2}"
+    # specifically managing "de orsay" to "d'orsay" (but not "le haricot")
   - RegexReplace:
       from: "(^|\\W)le[ ']+([aiîouyéèê]|et[^ ]|e[^t].)"
       to: "${1}l'${2}"

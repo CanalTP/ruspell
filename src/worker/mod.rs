@@ -1,14 +1,17 @@
-use workers::regex_processor;
-use workers::ispell_wrapper;
-use param;
+pub mod bano_reader;
+pub mod ispell_wrapper;
+pub mod regex_processor;
+
+use conf;
 use utils;
 use errors::Result;
+
 
 pub enum Processor {
     Fixedcase(regex_processor::FixedcaseProcessor),
     RegexReplace(regex_processor::RegexReplace),
     Ispell(ispell_wrapper::SpellCheck),
-    Decode(param::Decode),
+    Decode(conf::Decode),
     SnakeCase,
     FirstLetterUppercase,
     LogSuspicious(regex_processor::LogSuspicious),
