@@ -59,8 +59,16 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
     sequence.processes
         .into_iter()
         .map(|a| match a {
-            LowercaseWord(lcw) => rp::FixedcaseProcessor::new(&lcw.words, true).map(WP::Fixedcase),
-            UppercaseWord(ucw) => rp::FixedcaseProcessor::new(&ucw.words, false).map(WP::Fixedcase),
+            LowercaseWord(lcw) => {
+                rp::FixedcaseProcessor::new(&lcw.words, true)
+                    .chain_err(|| "Could not create LowercaseWord manager")
+                    .map(WP::Fixedcase)
+            }
+            UppercaseWord(ucw) => {
+                rp::FixedcaseProcessor::new(&ucw.words, false)
+                    .chain_err(|| "Could not create UppercaseWord manager")
+                    .map(WP::Fixedcase)
+            }
             IspellCheck(i) => {
                 let mut ispell =
                 ispell_wrapper::SpellCheck::new().chain_err(|| "Could not create ispell manager")?;

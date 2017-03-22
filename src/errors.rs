@@ -5,5 +5,6 @@ error_chain! {
         Ispell(::ispell::Error);
         Csv(::csv::Error);
         Regex(::regex::Error);
+        Fmt(::std::fmt::Error);
     }
 }
