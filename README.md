@@ -1,2 +1,141 @@
-# ruspell
-spell-checker for transportation data
+ruspell
+=======
+
+Executable to perform a spell-check on csv file
+(first aimed at french transportation stop-signs data)
+
+
+Usage
+-----
+
+Compile
+```bash
+cargo build --release
+```
+
+You can use it like on the tests file included
+```bash
+cd tests/data
+../../target/release/ruspell -i stops.txt -r rules.csv -o stops_out.txt -c conf/config-fr_idf.yml
+```
+A diff with `stops_out_ref.txt` should output nothing:
+```bash
+diff stops_out.txt stops_out_ref.txt
+```
+
+
+Requirements
+------------
+
+You probably want to install aspell before use
+(especially if you activate `IspellChecker` in conf).
+On debian (here for french spellcheck):
+```bash
+sudo apt-get install aspell-fr
+```
+
+
+Configuration
+-------------
+
+The configuration file allows management of the processing sequence to be applied to the csv file.
+The order of the sequence in conf is respected (and matters most of the time).
+
+Processors available are:
+
+Decode:
+Decode double-encoded files.
+You can specify any encoding to decode from within the list being matched by
+[rust_encoding](https://github.com/lifthrasiir/rust-encoding/blob/master/src/label.rs)
+Example:
+```yaml
+  - Decode:
+      from_encoding: iso_8859-15 # latin9
+```
+
+RegexReplace:
+Replace all matches of a `from` regular expression by the provided `to` expression.
+By default the matching is case-insensitive (use `(?-i)` to specify otherwise).
+You can use the whole [rust regex-syntax](https://doc.rust-lang.org/regex/regex/index.html#syntax)
+in your expressions.
+Example:
+```yaml
+  - RegexReplace:
+      from: "(^|\\W)pl\\.?(\\W|$)"
+      to: "${1}Place${2}"
+```
+This will replace any `pl` or `pl.` preceded and followed by non-alphanumeric character
+by `Place` (`${1}` and `${2}` are just pasting matched previous and following characters).
+
+
+IspellCheck:
+Perform a spellcheck using aspell (and its dictionnary).
+Replaces a word only if normed version (no accent, case-insensitive) of the word is the same.
+You can provide a list of bano CSV files so that
+street and city names are added to aspell dictionary.
+Example:
+```yaml
+  - IspellCheck:
+      dictionnary: "fr"
+      bano_files:
+        - "bano/bano-75.csv"
+        - "bano/bano-77.csv"
+```
+
+
+SnakeCase:
+Change case so that from a name "HELLO i'm A Random naME",
+the case is changed to "Hello I'M A Random Name"
+(All lowercase, first letter of each word uppercase).
+Example:
+```yaml
+  - SnakeCase
+```
+
+
+UppercaseWord:
+Change case of all word matching (case-insensitive) one of the regex in the list,
+so that word is full uppercase.
+Example:
+```yaml
+  - UppercaseWord:
+      words:
+        - RER
+        - "\\w*\\d\\w*" # words containing a digit
+```
+Using example above, "rER" is changed to "RER" and
+"Rn25bis" is changed to "RN25BIS".
+
+
+LowercaseWord:
+Change case of all word matching (case-insensitive) one of the regex in the list,
+so that word is full lowercase.
+Example:
+```yaml
+  - UppercaseWord:
+      words:
+        - de
+        - "\\d+([eè]me|[eè]re?|nde?)" # manage "2ème" (has to be after uppercase management)
+```
+Using example above, "dE" is changed to "de" and
+"2NDE" is changed to "2nde".
+
+
+FirstLetterUppercase:
+Change case to upper only for the first letter of the name.
+This way "hello. i'm a message - random" is changed to "Hello. i'm a message - random"
+Example:
+```yaml
+  - FirstLetterUppercase
+```
+
+
+LogSuspicious:
+Output a warning log for each match with the provided regex.
+Example:
+```yaml
+  - LogSuspicious:
+      regex: "[^\\w \\(\\)]"
+```
+This example will output a warning for each character that
+is none of alphanumeric, space or parenthesis.
