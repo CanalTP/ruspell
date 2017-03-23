@@ -21,10 +21,10 @@ pub struct SpellCheck {
     cache: Option<SpellCache>,
 }
 impl SpellCheck {
-    pub fn new() -> Result<Self> {
+    pub fn new(dict: &str) -> Result<Self> {
         Ok(SpellCheck {
             aspell: ispell::SpellLauncher::new().aspell()
-                .dictionary("fr")
+                .dictionary(dict)
                 .launch()?,
             cache: None,
         })
