@@ -11,15 +11,11 @@ Compile
 cargo build --release
 ```
 
-You can use it like on the tests file included
+You can use ruspell as follows
 ```bash
-cd tests/data
-../../target/release/ruspell -i stops.txt -r rules.csv -o stops_out.txt -c conf/config-fr_idf.yml
+target/release/ruspell -i stops.txt -c config.yml -r rules.csv -o stops_out.txt
 ```
-A diff with `stops_out_ref.txt` should output nothing:
-```bash
-diff stops_out.txt stops_out_ref.txt
-```
+> You may find files examples (including config file) in `tests/data` directory.
 
 
 ## Requirements
@@ -31,6 +27,17 @@ On debian (here for french spellcheck):
 ```bash
 sudo apt-get install aspell-fr
 ```
+
+
+## Tests
+
+Ruspell is tested running on a fr-idf file.
+
+Simply do:
+```bash
+sh tests/fr-idf.sh
+```
+> If diffs are displayed, tests failed.
 
 
 ## Configuration

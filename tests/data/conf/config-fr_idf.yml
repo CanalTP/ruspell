@@ -72,14 +72,14 @@ processes:
   - IspellCheck:
       dictionnary: "fr"
       bano_files:
-        - "bano/bano-75.csv"
-        - "bano/bano-77.csv"
-        - "bano/bano-78.csv"
-        - "bano/bano-91.csv"
-        - "bano/bano-92.csv"
-        - "bano/bano-93.csv"
-        - "bano/bano-94.csv"
-        - "bano/bano-95.csv"
+        - "tests/data/bano/bano-75.csv"
+        - "tests/data/bano/bano-77.csv"
+        - "tests/data/bano/bano-78.csv"
+        - "tests/data/bano/bano-91.csv"
+        - "tests/data/bano/bano-92.csv"
+        - "tests/data/bano/bano-93.csv"
+        - "tests/data/bano/bano-94.csv"
+        - "tests/data/bano/bano-95.csv"
 
   - SnakeCase
 
