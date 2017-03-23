@@ -11,6 +11,11 @@ rust:
 script:
   - cargo fmt -- --write-mode=diff
   - cargo test
+  - sudo apt-get -qq update
+  - sudo apt-get install -y aspell aspell-fr
+  - cd tests/data
+  - ../../target/release/ruspell -i stops.txt -r rules.csv -o stops_out.txt -c conf/config-fr_idf.yml
+  - diff stops_out.txt stops_out_ref.txt
 
 matrix:
   allow_failures:
