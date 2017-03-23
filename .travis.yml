@@ -1,4 +1,8 @@
 language: rust
+addons:
+  apt:
+    packages:
+      - aspell-fr
 cache: cargo
 before_script:
   - cargo install -f rustfmt --vers 0.7.1  # the 0.8.0 is buggy, for the moment we fix the version
@@ -11,11 +15,7 @@ rust:
 script:
   - cargo fmt -- --write-mode=diff
   - cargo test
-  - sudo apt-get -qq update
-  - sudo apt-get install -y aspell aspell-fr
-  - cd tests/data
-  - ../../target/release/ruspell -i stops.txt -r rules.csv -o stops_out.txt -c conf/config-fr_idf.yml
-  - diff stops_out.txt stops_out_ref.txt
+  - sh tests/fr-idf.sh
 
 matrix:
   allow_failures:
