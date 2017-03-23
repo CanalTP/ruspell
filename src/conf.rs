@@ -71,8 +71,8 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
                     .map(WP::Fixedcase)
             }
             IspellCheck(i) => {
-                let mut ispell =
-                ispell_wrapper::SpellCheck::new(&i.dictionnary).chain_err(|| "Could not create ispell manager")?;
+                let mut ispell = ispell_wrapper::SpellCheck::new(&i.dictionnary)
+                    .chain_err(|| "Could not create ispell manager")?;
                 bano_reader::populate_dict_from_files(&i.bano_files, &mut ispell)?;
                 Ok(WP::Ispell(ispell))
             }
