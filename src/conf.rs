@@ -39,6 +39,7 @@ struct RegexReplace {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct IspellCheck {
+    dictionnary: String,
     bano_files: Vec<String>,
 }
 
@@ -71,7 +72,7 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
             }
             IspellCheck(i) => {
                 let mut ispell =
-                ispell_wrapper::SpellCheck::new().chain_err(|| "Could not create ispell manager")?;
+                ispell_wrapper::SpellCheck::new(&i.dictionnary).chain_err(|| "Could not create ispell manager")?;
                 bano_reader::populate_dict_from_files(&i.bano_files, &mut ispell)?;
                 Ok(WP::Ispell(ispell))
             }
