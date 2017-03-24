@@ -47,6 +47,7 @@ The order of the sequence in conf is respected (and matters most of the time).
 
 Processors available are:
 
+
 ### Decode:
 Decode double-encoded files.
 You can specify any encoding to decode from within the list being matched by
@@ -57,6 +58,8 @@ Ex:
   - Decode:
       from_encoding: iso_8859-15 # latin9
 ```
+> This would help replace "CrÃ©teil" by "Créteil".
+> These encoding problems happen when taking a utf-8 file, and re-encoding it from latin9 to utf-8.
 
 
 ### RegexReplace:
@@ -124,7 +127,7 @@ Example:
   - UppercaseWord:
       words:
         - de
-        - "\\d+([eè]me|[eè]re?|nde?)" # manage "2ème" (has to be after uppercase management)
+        - "\\d+([eè]me|[eè]re?|nde?)"
 ```
 > This will change `dE` to `de` and `2NDE` to `2nde`.
 
