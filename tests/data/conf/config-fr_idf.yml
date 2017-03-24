@@ -48,6 +48,9 @@ processes:
       from: " a "
       to: " à "
   - RegexReplace:
+      from: "oeu"
+      to: "œu"
+  - RegexReplace:
       from: "(^|[^ ])(?: -|- )([^ ]|$)"
       to: "${1} - ${2}"
   - RegexReplace:
