@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::iter::FilterMap;
 use std::io;
 use csv;
@@ -11,7 +11,7 @@ pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Re
     // map_normed["napoleon"] = map_napo
     // map_napo["Napoléon"] = 42 (occurences)
     // map_napo["Napoleon"] = 2 (occurences)
-    let mut map_normed = HashMap::new();
+    let mut map_normed = BTreeMap::new();
 
     for f in files {
         println!("Reading street and city names from {}", f);
@@ -28,7 +28,7 @@ pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Re
                 if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
                     continue;
                 }
-                let map = map_normed.entry(utils::normed(w)).or_insert_with(HashMap::new);
+                let map = map_normed.entry(utils::normed(w)).or_insert_with(BTreeMap::new);
                 *map.entry(w.to_string()).or_insert(0) += 1;
             }
         }
@@ -51,7 +51,7 @@ pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Re
     Ok(())
 }
 
-fn get_interesting_word(map: &HashMap<String, u32>) -> Option<String> {
+fn get_interesting_word(map: &BTreeMap<String, u32>) -> Option<String> {
     let mut map_iter = map.iter();
     let mut first_max_w = map_iter.next().expect("This map should never be empty");
     let mut second_max_count = 0;
