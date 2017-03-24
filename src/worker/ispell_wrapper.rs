@@ -25,6 +25,7 @@ impl SpellCheck {
         Ok(SpellCheck {
             aspell: ispell::SpellLauncher::new().aspell()
                 .dictionary(dict)
+                .timeout(10000)
                 .launch()?,
             cache: None,
         })
