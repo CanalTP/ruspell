@@ -101,7 +101,9 @@ processes:
   - RegexReplace:
       from: "(^|\\W)de[ ']+([aiîouyéèê]|et[^ ]|e[^t].)"
       to: "${1}d'${2}"
-
+  - RegexReplace:
+      from: "(^|\\W)Cite(s?)(\\W|$)"
+      to: "${1}Cité${2}${3}"
   - UppercaseWord:
       words:
         - RER
