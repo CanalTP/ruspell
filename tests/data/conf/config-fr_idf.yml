@@ -74,7 +74,7 @@ processes:
       from: "(^|\\W)de la 1ème(\\W|$)"
       to: "${1}de la 1ère${2}"
 
-  #hardcode some unhandled words          
+  #hardcode some unhandled words
   - RegexReplace:
       from: "(^|\\W)Cite(s?)(\\W|$)"
       to: "${1}Cité${2}${3}"
@@ -181,7 +181,10 @@ processes:
         - "\\d+([eè]me|[eè]re?|nde?)" # manage "2ème" (has to be after uppercase management)
 
   - FirstLetterUppercase # to be done after lowercase management
-
+  #hardcode some unhandled words
+  - RegexReplace:
+      from: "(^|\\W)Vairés(\\W|$)"
+      to: "${1}Vaires${2}"
   - LogSuspicious:
       regex: "[^\\w '-/\\(\\)\\.]"
   - LogSuspicious:
