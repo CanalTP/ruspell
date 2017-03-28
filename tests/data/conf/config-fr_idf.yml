@@ -12,6 +12,9 @@ processes:
     # expand "Saint(e)" and add final "-"
     # NOTA: must be done before spell-check
   - RegexReplace:
+      from: "-Metro"
+      to: " - Métro"
+  - RegexReplace:
       from: "(^|\\W)s(?:ain)?t(e?)\\W+"
       to: "${1}Saint${2}-"
   - RegexReplace:
