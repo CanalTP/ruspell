@@ -12,6 +12,9 @@ processes:
     # expand "Saint(e)" and add final "-"
     # NOTA: must be done before spell-check
   - RegexReplace:
+      from: "-M[eé]tro"
+      to: " - Métro"
+  - RegexReplace:
       from: "(^|\\W)s(?:ain)?t(e?)\\W+"
       to: "${1}Saint${2}-"
   - RegexReplace:
@@ -71,6 +74,13 @@ processes:
       from: "(^|\\W)de la 1ème(\\W|$)"
       to: "${1}de la 1ère${2}"
 
+  #hardcode some unhandled words
+  - RegexReplace:
+      from: "(^|\\W)Cite(s?)(\\W|$)"
+      to: "${1}Cité${2}${3}"
+  - RegexReplace:
+      from: "(^|\\W)Alesia(\\W|$)"
+      to: "${1}Alésia${2}"
     # ispell can change case
   - IspellCheck:
       dictionnary: "fr"
@@ -171,7 +181,10 @@ processes:
         - "\\d+([eè]me|[eè]re?|nde?)" # manage "2ème" (has to be after uppercase management)
 
   - FirstLetterUppercase # to be done after lowercase management
-
+  #hardcode some unhandled words
+  - RegexReplace:
+      from: "(^|\\W)Vairés(\\W|$)"
+      to: "${1}Vaires${2}"
   - LogSuspicious:
       regex: "[^\\w '-/\\(\\)\\.]"
   - LogSuspicious:
