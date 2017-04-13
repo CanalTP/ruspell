@@ -81,6 +81,9 @@ processes:
   - RegexReplace:
       from: "(^|\\W)Alesia(\\W|$)"
       to: "${1}Alésia${2}"
+  - RegexReplace:
+      from: "(^|\\W)Ru(\\W|$)"
+      to: "${1}Rû${2}"      
     # ispell can change case
   - IspellCheck:
       dictionnary: "fr"
