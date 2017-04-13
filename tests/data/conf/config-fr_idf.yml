@@ -93,6 +93,7 @@ processes:
         - "tests/data/bano/bano-93.csv"
         - "tests/data/bano/bano-94.csv"
         - "tests/data/bano/bano-95.csv"
+        - "tests/data/bano/stops_osm.csv"
 
   - SnakeCase
 
