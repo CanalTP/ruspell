@@ -186,6 +186,9 @@ processes:
   - RegexReplace:
       from: "(^|\\W)Vairés(\\W|$)"
       to: "${1}Vaires${2}"
+  - RegexReplace:
+      from: "(^|\\W)Ségrais(\\W|$)"
+      to: "${1}Segrais${2}"      
   - LogSuspicious:
       regex: "[^\\w '-/\\(\\)\\.]"
   - LogSuspicious:
