@@ -86,6 +86,7 @@ processes:
       to: "${1}Rû${2}"      
     # ispell can change case
   - IspellCheck:
+    #   dictionnary: "./tests/data/empty.hash"
       dictionnary: "fr"
       bano_files:
         - "tests/data/bano/bano-75.csv"
