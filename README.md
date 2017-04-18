@@ -39,6 +39,23 @@ sh tests/fr-idf.sh
 ```
 > If diffs are displayed, tests failed.
 
+### Troubleshooting
+
+#### language "fr" is not known
+
+Following some changes in debian files architecture, aspell might output this message:
+```
+Erreur : ./tests/data/empty_aspell_dict.hash: The language "fr" is not known.
+Cela est la cause probable : the file "/usr/share/aspell/fr.dat" can not be opened for reading.
+```
+See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=772415
+
+A possible workaround is to create symbolic links:
+```bash
+sudo ln -sf /usr/lib/aspell/fr.dat /usr/share/aspell/fr.dat
+sudo ln -sf /usr/lib/aspell/fr_phonet.dat /usr/share/aspell/fr_phonet.dat
+```
+
 
 ## Configuration
 
