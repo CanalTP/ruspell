@@ -17,6 +17,14 @@ target/release/ruspell -i stops.txt -c config.yml -r rules.csv -o stops_out.txt
 ```
 > You may find files examples (including config file) in `tests/data` directory.
 
+### With docker
+You need Docker 17.06 CE
+```bash
+docker build -t ruspell
+```
+```bash
+docker run --rm -v path/to/input:/app/input -v path/to/output:/app/output ruspell -i /app/input/stops.txt -c /app/input/config.yml -r /app/input/rules.csv -o /app/output/stops_out.txt
+```
 
 ## Requirements
 
