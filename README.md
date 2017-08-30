@@ -92,13 +92,15 @@ Replaces a word only if normed version (no accent, case-insensitive) of the word
 You can provide a list of bano CSV files so that
 street and city names are added to aspell dictionary.
 
+The paths can be absolute or relative to the config path.
+
 Ex:
 ```yaml
   - IspellCheck:
       dictionnary: "fr"
       bano_files:
         - "bano/bano-75.csv"
-        - "bano/bano-77.csv"
+        - "/bano/bano-77.csv"
 ```
 
 

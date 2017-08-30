@@ -2,6 +2,7 @@ use std::fs::File;
 use worker::{self, ispell_wrapper, bano_reader, regex_processor as rp};
 use errors::{Result, ResultExt};
 use serde_yaml;
+use std::path::Path;
 
 // define config file structure
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -71,9 +72,11 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
                     .map(WP::Fixedcase)
             }
             IspellCheck(i) => {
+                // the conf_file is already valid, thus this can't fail
+                let conf_path = Path::new(conf_file).parent().unwrap();
                 let mut ispell = ispell_wrapper::SpellCheck::new(&i.dictionnary)
                     .chain_err(|| "Could not create ispell manager")?;
-                bano_reader::populate_dict_from_files(&i.bano_files, &mut ispell)?;
+                bano_reader::populate_dict_from_files(&i.bano_files, &mut ispell, conf_path)?;
                 Ok(WP::Ispell(ispell))
             }
             RegexReplace(re) => rp::RegexReplace::new(&re.from, &re.to).map(WP::RegexReplace),
