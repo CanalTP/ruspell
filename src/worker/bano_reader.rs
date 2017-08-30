@@ -5,19 +5,25 @@ use csv;
 use utils;
 use super::ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
+use std::path::Path;
 
-pub fn populate_dict_from_files(files: &[String], ispell: &mut SpellCheck) -> Result<()> {
+pub fn populate_dict_from_files(files: &[String],
+                                ispell: &mut SpellCheck,
+                                conf_path: &Path)
+                                -> Result<()> {
     // This map is built as follows :
     // map_normed["napoleon"] = map_napo
     // map_napo["Napoléon"] = 42 (occurences)
     // map_napo["Napoleon"] = 2 (occurences)
     let mut map_normed = BTreeMap::new();
-
     for f in files {
-        println!("Reading street and city names from {}", f);
+        let mut file_path = conf_path.join(f);
+        file_path = file_path.canonicalize()
+            .chain_err(|| format!("Could not read {}", file_path.display()))?;
+        println!("Reading street and city names from {}", file_path.display());
 
-        let mut rdr = csv::Reader::from_file(f)
-            .chain_err(|| "Could not open BANO file")?
+        let mut rdr = csv::Reader::from_file(&file_path)
+            .chain_err(|| format!("Could not open BANO file {}", file_path.display()))?
             .double_quote(true)
             .has_headers(false);
         let banos = new_bano_iter(&mut rdr);

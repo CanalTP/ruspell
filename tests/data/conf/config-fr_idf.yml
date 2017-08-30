@@ -83,20 +83,20 @@ processes:
       to: "${1}Alésia${2}"
   - RegexReplace:
       from: "(^|\\W)Ru(\\W|$)"
-      to: "${1}Rû${2}"      
+      to: "${1}Rû${2}"
     # ispell can change case
   - IspellCheck:
       dictionnary: "fr"
       bano_files:
-        - "tests/data/bano/bano-75.csv"
-        - "tests/data/bano/bano-77.csv"
-        - "tests/data/bano/bano-78.csv"
-        - "tests/data/bano/bano-91.csv"
-        - "tests/data/bano/bano-92.csv"
-        - "tests/data/bano/bano-93.csv"
-        - "tests/data/bano/bano-94.csv"
-        - "tests/data/bano/bano-95.csv"
-        - "tests/data/bano/stops_osm.csv"
+        - "../bano/bano-75.csv"
+        - "../bano/bano-77.csv"
+        - "../bano/bano-78.csv"
+        - "../bano/bano-91.csv"
+        - "../bano/bano-92.csv"
+        - "../bano/bano-93.csv"
+        - "../bano/bano-94.csv"
+        - "../bano/bano-95.csv"
+        - "../bano/stops_osm.csv"
 
   - SnakeCase
 
@@ -191,7 +191,7 @@ processes:
       to: "${1}Vaires${2}"
   - RegexReplace:
       from: "(^|\\W)Ségrais(\\W|$)"
-      to: "${1}Segrais${2}"      
+      to: "${1}Segrais${2}"
   - LogSuspicious:
       regex: "[^\\w '-/\\(\\)\\.]"
   - LogSuspicious:
