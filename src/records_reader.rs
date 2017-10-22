@@ -1,74 +1,63 @@
 use csv;
 use std::io;
 use errors::{Result, ResultExt};
-
+use std::collections::HashMap;
 #[derive(Debug)]
 pub struct Record {
     pub id: String,
     pub name: String,
-    pub raw: Vec<String>,
+    pub raw: HashMap<String, String>,
 }
 
-pub struct RecordIter<'a, R: io::Read + 'a> {
-    iter: csv::StringRecords<'a, R>,
-    id_pos: usize,
-    name_pos: usize,
+pub struct RecordIter<'r, R: io::Read + 'r> {
+    iter: csv::StringRecordsIter<'r, R>,
+    heading_id: String,
+    heading_name: String,
+    headers: csv::StringRecord,
 }
-impl<'a, R: io::Read + 'a> RecordIter<'a, R> {
-    fn new(r: &'a mut csv::Reader<R>, heading_id: &str, heading_name: &str) -> csv::Result<Self> {
-        let headers = r.headers()?;
 
-        let get_optional_pos = |name| headers.iter().position(|s| s == name);
-        let get_pos = |field| {
-            get_optional_pos(field).ok_or_else(|| {
-                csv::Error::Decode(format!("Invalid file, cannot find column '{}'", field))
-            })
-        };
+impl<'r, R: io::Read + 'r> RecordIter<'r, R> {
+    fn new(r: &'r mut csv::Reader<R>, heading_id: &str, heading_name: &str) -> csv::Result<Self> {
+        let headers = r.headers()?.clone();
 
         Ok(RecordIter {
             iter: r.records(),
-            id_pos: get_pos(heading_id)?,
-            name_pos: get_pos(heading_name)?,
+            heading_id: heading_id.to_string(),
+            heading_name: heading_name.to_string(),
+            headers,
         })
     }
 }
-impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
+
+impl<'r, R: io::Read + 'r> Iterator for RecordIter<'r, R> {
     type Item = csv::Result<Record>;
     fn next(&mut self) -> Option<Self::Item> {
-        fn get(record: &[String], pos: usize) -> csv::Result<&str> {
-            match record.get(pos) {
-                Some(s) => Ok(s),
-                None => Err(csv::Error::Decode(format!(
-                    "Failed accessing record '{}'.",
-                    pos
-                ))),
-            }
+        fn get<'a>(record: &'a HashMap<String, String>, column: &str) -> String {
+            record.get(column).unwrap().to_string()
         }
 
         self.iter.next().map(|r| {
             r.and_then(|r| {
-                let id = get(&r, self.id_pos)?.to_string();
-                let name = get(&r, self.name_pos)?.to_string();
-                Ok(Record {
-                    id: id,
-                    name: name,
-                    raw: r,
-                })
+                let rec: HashMap<String, String> = r.deserialize(Some(&self.headers))?;
+
+                let id = get(&rec, &self.heading_id);
+                let name = get(&rec, &self.heading_name);
+                Ok(Record { id, name, raw: rec })
             })
         })
     }
 }
 
-pub fn new_record_iter<'a, R: io::Read + 'a>(
-    r: &'a mut csv::Reader<R>,
+pub fn new_record_iter<'r, R: io::Read + 'r>(
+    r: &'r mut csv::Reader<R>,
     heading_id: &str,
     heading_name: &str,
-) -> Result<(RecordIter<'a, R>, Vec<String>, usize)> {
+) -> Result<(RecordIter<'r, R>, csv::StringRecord)> {
     let headers = r.headers()
-        .chain_err(|| "Can't find headers in input file")?;
+        .chain_err(|| "Can't find headers in input file")?
+        .clone();
     let rec_iter = RecordIter::new(r, heading_id, heading_name)
         .chain_err(|| "Can't find needed fields in the header of input file")?;
-    let pos = rec_iter.name_pos;
 
-    Ok((rec_iter, headers, pos))
+    Ok((rec_iter, headers))
 }

@@ -76,13 +76,13 @@ fn process_record(
         Ok(Some(RecordRule {
             id: rec.id.clone(),
             old_name: rec.name.clone(),
-            new_name: new_name,
+            new_name,
             debug: format!("{:?}", modifications),
         }))
     }
 }
 
-#[derive(Debug, RustcEncodable)]
+#[derive(Debug, Serialize)]
 struct RecordRule {
     id: String,
     old_name: String,
@@ -93,27 +93,27 @@ struct RecordRule {
 fn run() -> Result<()> {
     let args = Args::from_args();
 
-    let mut rdr_stops = csv::Reader::from_file(&args.input)
-        .chain_err(|| "Could not open input file")?
-        .double_quote(true);
-    let (records, headers, name_pos) =
+    let mut rdr_stops = csv::ReaderBuilder::new()
+        .from_path(&args.input)
+        .chain_err(|| "Could not open input file")?;
+    let (records, headers) =
         records_reader::new_record_iter(&mut rdr_stops, &args.heading_id, &args.heading_name)?;
 
     // producing rules to be applied to re-spell names
     let mut wtr_rules =
-        csv::Writer::from_file(&args.rules).chain_err(|| "Could not open rules file")?;
+        csv::Writer::from_path(&args.rules).chain_err(|| "Could not open rules file")?;
     wtr_rules
-        .encode(("id", "old_name", "new_name", "debug"))
+        .serialize(&["id", "old_name", "new_name", "debug"])
         .chain_err(|| "Could not write header of rules file")?;
 
     // producing output and replacing names only if requested (wtr_stops is an Option)
     let mut wtr_stops = match args.output {
-        Some(ref f) => Some(csv::Writer::from_file(f).chain_err(|| "Could not open output file")?),
+        Some(ref f) => Some(csv::Writer::from_path(f).chain_err(|| "Could not open output file")?),
         None => None,
     };
     wtr_stops
         .as_mut()
-        .map_or(Ok(()), |w| w.encode(headers))
+        .map_or(Ok(()), |w| w.write_record(&headers))
         .chain_err(|| "Could not write header of output file")?;
 
     //creating processor vector from config
@@ -122,14 +122,21 @@ fn run() -> Result<()> {
     for res_rec in records {
         let mut rec = res_rec.chain_err(|| format!("error at csv line decoding: {}", &args.input))?;
         if let Some(rule) = process_record(&rec, &mut processors)? {
-            rec.raw[name_pos] = rule.new_name.clone();
+            *rec.raw.get_mut(&args.heading_name).unwrap() = rule.new_name.clone();
+
             wtr_rules
-                .encode(&rule)
+                .serialize(&rule)
                 .chain_err(|| "Could not write into rules file")?;
         }
+
+        let mut stop_record: Vec<&str> = Vec::with_capacity(headers.len());
+        for h in &headers {
+            stop_record.push(&rec.raw[h]);
+        }
+
         wtr_stops
             .as_mut()
-            .map_or(Ok(()), |w| w.encode(&rec.raw))
+            .map_or(Ok(()), |w| w.serialize(&stop_record))
             .chain_err(|| "Could not write into output file")?;
     }
     Ok(())
