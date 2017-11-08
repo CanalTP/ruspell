@@ -28,7 +28,8 @@ pub fn populate_dict_from_files(files: &[String],
             .has_headers(false);
         let banos = new_bano_iter(&mut rdr);
 
-        for b in banos {
+        for res_b in banos {
+            let b = res_b.chain_err(|| format!("error at line csv decoding: {}", file_path.display()))?;
             for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
                 // do not consider full-uppercase word or word containing a digit
                 if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
@@ -123,14 +124,6 @@ impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
     }
 }
 
-type CompleteBanoIterator<'a, R> = FilterMap<BanoIter<'a, R>,
-                                             fn(csv::Result<Bano>) -> Option<Bano>>;
-
-fn new_bano_iter<R: io::Read>(r: &mut csv::Reader<R>) -> CompleteBanoIterator<R> {
-    fn reader_handler(rc: csv::Result<Bano>) -> Option<Bano> {
-        rc.map_err(|e| println!("error at csv line decoding : {}", e)).ok()
-    }
-    let rec_iter = BanoIter::new(r).expect("Can't find needed fields in the header.");
-
-    rec_iter.filter_map(reader_handler)
+fn new_bano_iter<'a, R: io::Read>(r: &'a mut csv::Reader<R>) -> BanoIter<'a, R> {
+    BanoIter::new(r).expect("Can't find needed fields in the header.")
 }

@@ -99,7 +99,7 @@ struct RecordRule {
 fn run() -> Result<()> {
     let args = Args::from_args();
 
-    let mut rdr_stops = csv::Reader::from_file(args.input)
+    let mut rdr_stops = csv::Reader::from_file(&args.input)
         .chain_err(|| "Could not open input file")?
         .double_quote(true);
     let (records, headers, name_pos) =
@@ -107,7 +107,7 @@ fn run() -> Result<()> {
 
     // producing rules to be applied to re-spell names
     let mut wtr_rules =
-        csv::Writer::from_file(args.rules).chain_err(|| "Could not open rules file")?;
+        csv::Writer::from_file(&args.rules).chain_err(|| "Could not open rules file")?;
     wtr_rules.encode(("id", "old_name", "new_name", "debug"))
         .chain_err(|| "Could not write header of rules file")?;
 
@@ -123,7 +123,8 @@ fn run() -> Result<()> {
     //creating processor vector from config
     let mut processors = conf::read_conf(&args.config).chain_err(|| "Could not read config file")?;
 
-    for mut rec in records {
+    for res_rec in records {
+        let mut rec = res_rec.chain_err(|| format!("error at csv line decoding: {}", &args.input))?;
         if let Some(rule) = process_record(&rec, &mut processors)? {
             rec.raw[name_pos] = rule.new_name.clone();
             wtr_rules.encode(&rule).chain_err(|| "Could not write into rules file")?;
