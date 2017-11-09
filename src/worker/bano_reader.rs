@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::iter::FilterMap;
 use std::io;
 use csv;
 use utils;
@@ -7,10 +6,11 @@ use super::ispell_wrapper::SpellCheck;
 use errors::{Result, ResultExt};
 use std::path::Path;
 
-pub fn populate_dict_from_files(files: &[String],
-                                ispell: &mut SpellCheck,
-                                conf_path: &Path)
-                                -> Result<()> {
+pub fn populate_dict_from_files(
+    files: &[String],
+    ispell: &mut SpellCheck,
+    conf_path: &Path,
+) -> Result<()> {
     // This map is built as follows :
     // map_normed["napoleon"] = map_napo
     // map_napo["Napoléon"] = 42 (occurences)
@@ -18,24 +18,31 @@ pub fn populate_dict_from_files(files: &[String],
     let mut map_normed = BTreeMap::new();
     for f in files {
         let mut file_path = conf_path.join(f);
-        file_path = file_path.canonicalize()
-            .chain_err(|| format!("Could not read {}", file_path.display()))?;
+        file_path = file_path.canonicalize().chain_err(|| {
+            format!("Could not read {}", file_path.display())
+        })?;
         println!("Reading street and city names from {}", file_path.display());
 
         let mut rdr = csv::Reader::from_file(&file_path)
-            .chain_err(|| format!("Could not open BANO file {}", file_path.display()))?
+            .chain_err(|| {
+                format!("Could not open BANO file {}", file_path.display())
+            })?
             .double_quote(true)
             .has_headers(false);
         let banos = new_bano_iter(&mut rdr);
 
         for res_b in banos {
-            let b = res_b.chain_err(|| format!("error at line csv decoding: {}", file_path.display()))?;
+            let b = res_b.chain_err(|| {
+                format!("error at line csv decoding: {}", file_path.display())
+            })?;
             for w in b.street.split_whitespace().chain(b.city.split_whitespace()) {
                 // do not consider full-uppercase word or word containing a digit
                 if w.chars().all(|c| !c.is_lowercase()) || w.chars().any(|c| c.is_numeric()) {
                     continue;
                 }
-                let map = map_normed.entry(utils::normed(w)).or_insert_with(BTreeMap::new);
+                let map = map_normed.entry(utils::normed(w)).or_insert_with(
+                    BTreeMap::new,
+                );
                 *map.entry(w.to_string()).or_insert(0) += 1;
             }
         }
@@ -47,8 +54,9 @@ pub fn populate_dict_from_files(files: &[String],
     for map in map_normed.values() {
         if let Some(interesting_word) = get_interesting_word(map) {
             if (map[&interesting_word] >= corpus_size / 100000 ||
-                !ispell.has_competitor_word(&interesting_word)?) &&
-               !ispell.has_same_accent_word(&interesting_word)? {
+                    !ispell.has_competitor_word(&interesting_word)?) &&
+                !ispell.has_same_accent_word(&interesting_word)?
+            {
                 let _ = ispell.add_word(&interesting_word); // ignore the error
                 nb_added += 1;
             }
@@ -107,7 +115,9 @@ impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
         fn get(record: &[String], pos: usize) -> csv::Result<&str> {
             match record.get(pos) {
                 Some(s) => Ok(s),
-                None => Err(csv::Error::Decode(format!("Failed accessing record '{}'.", pos))),
+                None => Err(csv::Error::Decode(
+                    format!("Failed accessing record '{}'.", pos),
+                )),
             }
         }
 

@@ -20,7 +20,8 @@ impl FixedcaseProcessor {
         regex_str.pop();
         regex_str.push_str(")$");
         Ok(FixedcaseProcessor {
-            regex: RegexBuilder::new(&regex_str).case_insensitive(true)
+            regex: RegexBuilder::new(&regex_str)
+                .case_insensitive(true)
                 .build()
                 .chain_err(|| format!("Problem building the Regex from {}", regex_str))?,
             case: case,
@@ -54,7 +55,8 @@ pub struct RegexReplace {
 impl RegexReplace {
     pub fn new(from: &str, to: &str) -> Result<Self> {
         Ok(RegexReplace {
-            from: RegexBuilder::new(from).case_insensitive(true)
+            from: RegexBuilder::new(from)
+                .case_insensitive(true)
                 .build()
                 .chain_err(|| format!("Problem building the Regex from {}", from))?,
             to: to.to_string(),
@@ -72,7 +74,8 @@ pub struct LogSuspicious {
 impl LogSuspicious {
     pub fn new(regex: &str) -> Result<Self> {
         Ok(LogSuspicious {
-            regex: RegexBuilder::new(regex).case_insensitive(true)
+            regex: RegexBuilder::new(regex)
+                .case_insensitive(true)
                 .build()
                 .chain_err(|| format!("Problem building the Regex from {}", regex))?,
         })
