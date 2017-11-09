@@ -33,8 +33,7 @@ struct Args {
                         (typically a GTFS stops.txt file).")]
     input: String,
 
-    #[structopt(long = "config", short = "c",
-                help = "Path to configuration file to be read.")]
+    #[structopt(long = "config", short = "c", help = "Path to configuration file to be read.")]
     config: String,
 
     #[structopt(long = "output", short = "o",
@@ -60,9 +59,10 @@ struct Args {
 /// management of all processing applied to names
 /// returns None if no change was applied,
 /// Some modified name otherwise
-fn process_record(rec: &Record,
-                  processors: &mut [worker::Processor])
-                  -> Result<Option<RecordRule>> {
+fn process_record(
+    rec: &Record,
+    processors: &mut [worker::Processor],
+) -> Result<Option<RecordRule>> {
 
     let mut new_name = rec.name.clone();
     let mut modifications = vec![];
@@ -106,30 +106,42 @@ fn run() -> Result<()> {
         records_reader::new_record_iter(&mut rdr_stops, &args.heading_id, &args.heading_name)?;
 
     // producing rules to be applied to re-spell names
-    let mut wtr_rules =
-        csv::Writer::from_file(&args.rules).chain_err(|| "Could not open rules file")?;
-    wtr_rules.encode(("id", "old_name", "new_name", "debug"))
+    let mut wtr_rules = csv::Writer::from_file(&args.rules).chain_err(
+        || "Could not open rules file",
+    )?;
+    wtr_rules
+        .encode(("id", "old_name", "new_name", "debug"))
         .chain_err(|| "Could not write header of rules file")?;
 
     // producing output and replacing names only if requested (wtr_stops is an Option)
     let mut wtr_stops = match args.output {
-        Some(ref f) => Some(csv::Writer::from_file(f).chain_err(|| "Could not open output file")?),
+        Some(ref f) => Some(csv::Writer::from_file(f).chain_err(
+            || "Could not open output file",
+        )?),
         None => None,
     };
-    wtr_stops.as_mut()
+    wtr_stops
+        .as_mut()
         .map_or(Ok(()), |w| w.encode(headers))
         .chain_err(|| "Could not write header of output file")?;
 
     //creating processor vector from config
-    let mut processors = conf::read_conf(&args.config).chain_err(|| "Could not read config file")?;
+    let mut processors = conf::read_conf(&args.config).chain_err(
+        || "Could not read config file",
+    )?;
 
     for res_rec in records {
-        let mut rec = res_rec.chain_err(|| format!("error at csv line decoding: {}", &args.input))?;
+        let mut rec = res_rec.chain_err(|| {
+            format!("error at csv line decoding: {}", &args.input)
+        })?;
         if let Some(rule) = process_record(&rec, &mut processors)? {
             rec.raw[name_pos] = rule.new_name.clone();
-            wtr_rules.encode(&rule).chain_err(|| "Could not write into rules file")?;
+            wtr_rules.encode(&rule).chain_err(
+                || "Could not write into rules file",
+            )?;
         }
-        wtr_stops.as_mut()
+        wtr_stops
+            .as_mut()
             .map_or(Ok(()), |w| w.encode(&rec.raw))
             .chain_err(|| "Could not write into output file")?;
     }

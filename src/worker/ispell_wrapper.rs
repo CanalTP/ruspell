@@ -11,7 +11,9 @@ impl SpellCache {
     fn new(checker: &mut ispell::SpellChecker, name: &str) -> Result<Self> {
         Ok(SpellCache {
             name: name.to_string(),
-            errors: checker.check(name).chain_err(|| "Could not perform check using aspell")?,
+            errors: checker.check(name).chain_err(
+                || "Could not perform check using aspell",
+            )?,
         })
     }
 }
@@ -23,7 +25,8 @@ pub struct SpellCheck {
 impl SpellCheck {
     pub fn new(dict: &str) -> Result<Self> {
         Ok(SpellCheck {
-            aspell: ispell::SpellLauncher::new().aspell()
+            aspell: ispell::SpellLauncher::new()
+                .aspell()
                 .dictionary(dict)
                 .timeout(10000)
                 .launch()?,
@@ -39,10 +42,7 @@ impl SpellCheck {
         if self.cache.as_ref().map_or(true, |cache| cache.name != word) {
             self.cache = Some(SpellCache::new(&mut self.aspell, word)?);
         }
-        Ok(&self.cache
-            .as_ref()
-            .unwrap()
-            .errors)
+        Ok(&self.cache.as_ref().unwrap().errors)
     }
 
     // check for the presence of the same word, no matter the case
@@ -55,7 +55,10 @@ impl SpellCheck {
 
         let lower_case_w = word.to_lowercase();
         for e in misspelt_errors {
-            if e.suggestions.iter().any(|s| lower_case_w == s.to_lowercase()) {
+            if e.suggestions.iter().any(
+                |s| lower_case_w == s.to_lowercase(),
+            )
+            {
                 return Ok(true);
             }
         }
@@ -84,7 +87,10 @@ impl SpellCheck {
 
         let mut new_name = name.to_string();
 
-        for e in misspelt_errors.iter().filter(|e| !utils::has_accent(&e.misspelled)) {
+        for e in misspelt_errors.iter().filter(
+            |e| !utils::has_accent(&e.misspelled),
+        )
+        {
             let normed_miss = utils::normed(&e.misspelled);
             // set_lowercase just helps ignoring concurrence between
             // suggestions differing just by case
@@ -98,9 +104,11 @@ impl SpellCheck {
             if valid_suggestions.len() == 1 && utils::has_accent(valid_suggestions[0]) {
                 new_name = new_name.replace(&e.misspelled, valid_suggestions[0]);
             } else if valid_suggestions.len() > 1 {
-                println!("Aspell ambiguous suggestions for {} : {:?}",
-                         e.misspelled,
-                         valid_suggestions);
+                println!(
+                    "Aspell ambiguous suggestions for {} : {:?}",
+                    e.misspelled,
+                    valid_suggestions
+                );
             }
         }
         Ok(new_name)

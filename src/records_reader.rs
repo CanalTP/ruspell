@@ -39,7 +39,9 @@ impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
         fn get(record: &[String], pos: usize) -> csv::Result<&str> {
             match record.get(pos) {
                 Some(s) => Ok(s),
-                None => Err(csv::Error::Decode(format!("Failed accessing record '{}'.", pos))),
+                None => Err(csv::Error::Decode(
+                    format!("Failed accessing record '{}'.", pos),
+                )),
             }
         }
 
@@ -57,14 +59,15 @@ impl<'a, R: io::Read + 'a> Iterator for RecordIter<'a, R> {
     }
 }
 
-pub fn new_record_iter<'a, R: io::Read + 'a>
-    (r: &'a mut csv::Reader<R>,
-     heading_id: &str,
-     heading_name: &str)
-     -> Result<(RecordIter<'a, R>, Vec<String>, usize)> {
+pub fn new_record_iter<'a, R: io::Read + 'a>(
+    r: &'a mut csv::Reader<R>,
+    heading_id: &str,
+    heading_name: &str,
+) -> Result<(RecordIter<'a, R>, Vec<String>, usize)> {
     let headers = r.headers().chain_err(|| "Can't find headers in input file")?;
-    let rec_iter = RecordIter::new(r, heading_id, heading_name)
-        .chain_err(|| "Can't find needed fields in the header of input file")?;
+    let rec_iter = RecordIter::new(r, heading_id, heading_name).chain_err(
+        || "Can't find needed fields in the header of input file",
+    )?;
     let pos = rec_iter.name_pos;
 
     Ok((rec_iter, headers, pos))
