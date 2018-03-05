@@ -4,19 +4,22 @@ addons:
     packages:
       - aspell-fr
 cache: cargo
-before_script:
-  - cargo install -f rustfmt
-  - export PATH=$PATH:$HOME/.cargo/bin
 rust:
   - stable
   - beta
   - nightly
-
+env:
+  - RUN=TEST
 script:
-  - cargo fmt -- --write-mode=diff
   - cargo test
   - sh tests/fr-idf.sh
 
 matrix:
+  include:
+    - rust: nightly
+      env: RUN=RUSTFMT
+      before_script: rustup component add rustfmt-preview
+      script: cargo fmt --all -- --write-mode diff
   allow_failures:
     - rust: nightly
+      env: RUN=TEST

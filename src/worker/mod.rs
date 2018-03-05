@@ -6,7 +6,6 @@ use conf;
 use utils;
 use errors::Result;
 
-
 pub enum Processor {
     Fixedcase(regex_processor::FixedcaseProcessor),
     RegexReplace(regex_processor::RegexReplace),

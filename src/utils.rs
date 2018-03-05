@@ -4,29 +4,28 @@ use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 use errors::Result;
 
-
 pub fn decode(name: &str, encoding: &str) -> Result<String> {
     let enc = encoding_from_whatwg_label(encoding);
     if enc.is_none() {
         return Err(format!("Could not find encoding from {}", encoding).into());
     }
-    if let Ok(Ok(res)) = enc.unwrap().encode(name, EncoderTrap::Strict).map(
-        String::from_utf8,
-    )
+    if let Ok(Ok(res)) = enc.unwrap()
+        .encode(name, EncoderTrap::Strict)
+        .map(String::from_utf8)
     {
         return Ok(res);
     }
     Ok(name.to_string())
 }
 
-
 // split into words (based on non-alphanumeric chars)
 pub fn get_words(name: &str) -> Vec<&str> {
     let mut words = Vec::<&str>::new();
     let mut index_start_word = 0;
-    let mut is_current_alpha = name.chars().next().map(char::is_alphanumeric).unwrap_or(
-        true,
-    );
+    let mut is_current_alpha = name.chars()
+        .next()
+        .map(char::is_alphanumeric)
+        .unwrap_or(true);
     for c in name.char_indices() {
         if c.1.is_alphanumeric() != is_current_alpha {
             words.push(&name[index_start_word..c.0]);
@@ -38,7 +37,6 @@ pub fn get_words(name: &str) -> Vec<&str> {
     words
 }
 
-
 // Force the first char uppercase
 pub fn first_upper(name: &str) -> String {
     let mut chars = name.chars();
@@ -48,7 +46,6 @@ pub fn first_upper(name: &str) -> String {
     new_name
 }
 
-
 /// MUSEE dE La GARE sncf > Musee de la gare de lyon
 pub fn first_upper_all_lower(name: &str) -> String {
     let mut chars = name.chars();
@@ -57,7 +54,6 @@ pub fn first_upper_all_lower(name: &str) -> String {
     new_name.extend(chars.flat_map(char::to_lowercase));
     new_name
 }
-
 
 /// every word becomes Mmmmmm
 pub fn snake_case(name: &str) -> String {
