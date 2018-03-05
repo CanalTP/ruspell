@@ -4,13 +4,11 @@ extern crate encoding;
 extern crate error_chain;
 extern crate ispell;
 extern crate regex;
-extern crate rustc_serialize;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_yaml;
-extern crate structopt;
 #[macro_use]
-extern crate structopt_derive;
+extern crate structopt;
 extern crate unicode_normalization;
 
 mod utils;

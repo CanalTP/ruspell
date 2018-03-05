@@ -86,7 +86,6 @@ fn get_interesting_word(map: &BTreeMap<String, u32>) -> Option<String> {
     None
 }
 
-#[derive(RustcDecodable, RustcEncodable, Debug)]
 struct Bano {
     pub street: String,
     pub city: String,
@@ -125,10 +124,6 @@ impl<'a, R: io::Read + 'a> BanoIter<'a, R> {
 impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
     type Item = Result<Bano>;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.iter.next() {
-            Some(self.make_bano(item))
-        } else {
-            None
-        }
+        self.iter.next().map(|item| self.make_bano(item))
     }
 }

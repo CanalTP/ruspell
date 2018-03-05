@@ -33,7 +33,7 @@ impl<'r, R: io::Read + 'r> Iterator for RecordIter<'r, R> {
     type Item = csv::Result<Record>;
     fn next(&mut self) -> Option<Self::Item> {
         fn get<'a>(record: &'a HashMap<String, String>, column: &str) -> String {
-            record.get(column).unwrap().to_string()
+            record[column].to_string()
         }
 
         self.iter.next().map(|r| {
