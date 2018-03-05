@@ -11,9 +11,9 @@ impl SpellCache {
     fn new(checker: &mut ispell::SpellChecker, name: &str) -> Result<Self> {
         Ok(SpellCache {
             name: name.to_string(),
-            errors: checker.check(name).chain_err(
-                || "Could not perform check using aspell",
-            )?,
+            errors: checker
+                .check(name)
+                .chain_err(|| "Could not perform check using aspell")?,
         })
     }
 }
@@ -55,9 +55,9 @@ impl SpellCheck {
 
         let lower_case_w = word.to_lowercase();
         for e in misspelt_errors {
-            if e.suggestions.iter().any(
-                |s| lower_case_w == s.to_lowercase(),
-            )
+            if e.suggestions
+                .iter()
+                .any(|s| lower_case_w == s.to_lowercase())
             {
                 return Ok(true);
             }
@@ -87,9 +87,9 @@ impl SpellCheck {
 
         let mut new_name = name.to_string();
 
-        for e in misspelt_errors.iter().filter(
-            |e| !utils::has_accent(&e.misspelled),
-        )
+        for e in misspelt_errors
+            .iter()
+            .filter(|e| !utils::has_accent(&e.misspelled))
         {
             let normed_miss = utils::normed(&e.misspelled);
             // set_lowercase just helps ignoring concurrence between
@@ -106,8 +106,7 @@ impl SpellCheck {
             } else if valid_suggestions.len() > 1 {
                 println!(
                     "Aspell ambiguous suggestions for {} : {:?}",
-                    e.misspelled,
-                    valid_suggestions
+                    e.misspelled, valid_suggestions
                 );
             }
         }

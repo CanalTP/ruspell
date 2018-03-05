@@ -47,7 +47,6 @@ impl FixedcaseProcessor {
     }
 }
 
-
 pub struct RegexReplace {
     from: Regex,
     to: String,
@@ -66,7 +65,6 @@ impl RegexReplace {
         self.from.replace_all(name, self.to.as_str()).into_owned()
     }
 }
-
 
 pub struct LogSuspicious {
     regex: Regex,

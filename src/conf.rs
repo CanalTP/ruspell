@@ -1,5 +1,5 @@
 use std::fs::File;
-use worker::{self, ispell_wrapper, bano_reader, regex_processor as rp};
+use worker::{self, bano_reader, ispell_wrapper, regex_processor as rp};
 use errors::{Result, ResultExt};
 use serde_yaml;
 use std::path::Path;
@@ -53,34 +53,26 @@ pub fn read_conf(conf_file: &str) -> Result<Vec<worker::Processor>> {
     use self::NameProcessor::*;
     use worker::Processor as WP;
 
-    let conf_rdr = File::open(conf_file).chain_err(
-        || "Could not open config file",
-    )?;
+    let conf_rdr = File::open(conf_file).chain_err(|| "Could not open config file")?;
 
-    let sequence: ProcessSequence = serde_yaml::from_reader(conf_rdr).chain_err(
-        || "Problem while reading config file",
-    )?;
+    let sequence: ProcessSequence =
+        serde_yaml::from_reader(conf_rdr).chain_err(|| "Problem while reading config file")?;
 
     sequence
         .processes
         .into_iter()
         .map(|a| match a {
-            LowercaseWord(lcw) => {
-                rp::FixedcaseProcessor::new(&lcw.words, rp::CaseSpecifier::Lower)
-                    .chain_err(|| "Could not create LowercaseWord manager")
-                    .map(WP::Fixedcase)
-            }
-            UppercaseWord(ucw) => {
-                rp::FixedcaseProcessor::new(&ucw.words, rp::CaseSpecifier::Upper)
-                    .chain_err(|| "Could not create UppercaseWord manager")
-                    .map(WP::Fixedcase)
-            }
+            LowercaseWord(lcw) => rp::FixedcaseProcessor::new(&lcw.words, rp::CaseSpecifier::Lower)
+                .chain_err(|| "Could not create LowercaseWord manager")
+                .map(WP::Fixedcase),
+            UppercaseWord(ucw) => rp::FixedcaseProcessor::new(&ucw.words, rp::CaseSpecifier::Upper)
+                .chain_err(|| "Could not create UppercaseWord manager")
+                .map(WP::Fixedcase),
             IspellCheck(i) => {
                 // the conf_file is already valid, thus this can't fail
                 let conf_path = Path::new(conf_file).parent().unwrap();
-                let mut ispell = ispell_wrapper::SpellCheck::new(&i.dictionnary).chain_err(
-                    || "Could not create ispell manager",
-                )?;
+                let mut ispell = ispell_wrapper::SpellCheck::new(&i.dictionnary)
+                    .chain_err(|| "Could not create ispell manager")?;
                 bano_reader::populate_dict_from_files(&i.bano_files, &mut ispell, conf_path)?;
                 Ok(WP::Ispell(ispell))
             }
