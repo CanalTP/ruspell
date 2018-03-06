@@ -28,14 +28,15 @@ impl SpellCheck {
             aspell: ispell::SpellLauncher::new()
                 .aspell()
                 .dictionary(dict)
-                .timeout(10000)
+                .timeout(10_000)
                 .launch()?,
             cache: None,
         })
     }
 
     pub fn add_word(&mut self, new_word: &str) -> Result<()> {
-        Ok(self.aspell.add_word(new_word)?)
+        self.aspell.add_word(new_word)?;
+        Ok(())
     }
 
     fn get_ispell_errors(&mut self, word: &str) -> Result<&[ispell::IspellError]> {

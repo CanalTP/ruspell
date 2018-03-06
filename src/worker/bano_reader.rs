@@ -3,7 +3,7 @@ use std::io;
 use csv;
 use utils;
 use super::ispell_wrapper::SpellCheck;
-use errors::{Result, ResultExt};
+use errors::{ErrorKind, Result, ResultExt};
 use std::path::Path;
 
 pub fn populate_dict_from_files(
@@ -23,11 +23,11 @@ pub fn populate_dict_from_files(
             .chain_err(|| format!("Could not read {}", file_path.display()))?;
         println!("Reading street and city names from {}", file_path.display());
 
-        let mut rdr = csv::Reader::from_file(&file_path)
-            .chain_err(|| format!("Could not open BANO file {}", file_path.display()))?
-            .double_quote(true)
-            .has_headers(false);
-        let banos = new_bano_iter(&mut rdr);
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .from_path(&file_path)
+            .chain_err(|| format!("Could not open BANO file {}", file_path.display()))?;
+        let banos = BanoIter::new(&mut rdr);
 
         for res_b in banos {
             let b =
@@ -50,7 +50,7 @@ pub fn populate_dict_from_files(
     let mut nb_added = 0;
     for map in map_normed.values() {
         if let Some(interesting_word) = get_interesting_word(map) {
-            if (map[&interesting_word] >= corpus_size / 100000
+            if (map[&interesting_word] >= corpus_size / 100_000
                 || !ispell.has_competitor_word(&interesting_word)?)
                 && !ispell.has_same_accent_word(&interesting_word)?
             {
@@ -86,52 +86,44 @@ fn get_interesting_word(map: &BTreeMap<String, u32>) -> Option<String> {
     None
 }
 
-#[derive(RustcDecodable, RustcEncodable, Debug)]
 struct Bano {
     pub street: String,
     pub city: String,
 }
 
 struct BanoIter<'a, R: io::Read + 'a> {
-    iter: csv::StringRecords<'a, R>,
+    iter: csv::StringRecordsIter<'a, R>,
     street_pos: usize,
     city_pos: usize,
 }
 impl<'a, R: io::Read + 'a> BanoIter<'a, R> {
-    fn new(r: &'a mut csv::Reader<R>) -> csv::Result<Self> {
-        Ok(BanoIter {
+    fn new(r: &'a mut csv::Reader<R>) -> Self {
+        BanoIter {
             iter: r.records(),
             street_pos: 2,
             city_pos: 4,
-        })
+        }
     }
-}
-impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
-    type Item = csv::Result<Bano>;
-    fn next(&mut self) -> Option<Self::Item> {
-        fn get(record: &[String], pos: usize) -> csv::Result<&str> {
+
+    fn make_bano(&self, item: csv::Result<csv::StringRecord>) -> Result<Bano> {
+        fn get(record: &[String], pos: usize) -> Result<&str> {
             match record.get(pos) {
                 Some(s) => Ok(s),
-                None => Err(csv::Error::Decode(format!(
-                    "Failed accessing record '{}'.",
-                    pos
-                ))),
+                None => Err(ErrorKind::ColumnNotFound(pos.to_string()).into()),
             }
         }
 
-        self.iter.next().map(|r| {
-            r.and_then(|r| {
-                let street = get(&r, self.street_pos)?.to_string();
-                let city = get(&r, self.city_pos)?.to_string();
-                Ok(Bano {
-                    street: street,
-                    city: city,
-                })
-            })
-        })
+        let record = item?;
+        let r: Vec<String> = record.deserialize(None)?;
+        let street = get(&r, self.street_pos)?.to_string();
+        let city = get(&r, self.city_pos)?.to_string();
+        Ok(Bano { street, city })
     }
 }
 
-fn new_bano_iter<'a, R: io::Read>(r: &'a mut csv::Reader<R>) -> BanoIter<'a, R> {
-    BanoIter::new(r).expect("Can't find needed fields in the header.")
+impl<'a, R: io::Read + 'a> Iterator for BanoIter<'a, R> {
+    type Item = Result<Bano>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|item| self.make_bano(item))
+    }
 }

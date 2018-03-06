@@ -24,7 +24,7 @@ impl FixedcaseProcessor {
                 .case_insensitive(true)
                 .build()
                 .chain_err(|| format!("Problem building the Regex from {}", regex_str))?,
-            case: case,
+            case,
         })
     }
     pub fn process(&self, name: &str) -> String {

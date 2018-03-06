@@ -7,4 +7,11 @@ error_chain! {
         Regex(::regex::Error);
         Fmt(::std::fmt::Error);
     }
+
+    errors {
+        ColumnNotFound(t: String) {
+            description("column not found")
+            display("column {} not found", t)
+        }
+    }
 }
